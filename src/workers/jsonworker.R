@@ -53,6 +53,11 @@ handle_eval <- function(msg) {
   list(status = "ok", id = id)
 }
 
+handle_exec <- function(msg) {
+  eval(parse(text = msg$code), envir = .remote_env)
+  list(status = "ok")
+}
+
 handle_get <- function(msg) {
   value <- get_object(msg$id)
   list(status = "ok", value = value)
@@ -122,6 +127,7 @@ while (TRUE) {
     result <- switch(
       msg$cmd,
       eval   = handle_eval(msg),
+      exec   = handle_exec(msg),
       get    = handle_get(msg),
       assign = handle_assign(msg),
       call   = handle_call(msg),

@@ -41,3 +41,16 @@ Compared to rpy2 we aim for:
 - I'm also interested in supported other languages than R.
 
 However, at some point this package may fall back to something like rpy2 if we can get it to work.
+
+## TODO
+
+- [ ] Add `import_data` method.
+- [ ] Augment call-protocol
+- [ ] Support Julia
+- [ ] Add eval to R
+
+## Maybes
+- [ ] Switch to socket
+- [ ] Switch to msgpack
+- [ ] Consider mmap as optional alternative
+- [ ] Consider rpy2 as an optional backend
