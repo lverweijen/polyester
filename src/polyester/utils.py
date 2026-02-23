@@ -3,10 +3,10 @@ from polyester.rinterpreter import RInterpreter
 
 
 def get_interpreter(lang, path=None):
-    match lang:
+    match lang.lower():
         case "py" | "python":
             return PyInterpreter(path)
-        case "R":
+        case "r":
             return RInterpreter(path)
         case unknown_lang:
-            raise ValueError(f"Unknown language {unknown_lang}")
+            raise ValueError(f"Unknown language: {unknown_lang}")

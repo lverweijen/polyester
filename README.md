@@ -4,18 +4,18 @@ This package aims to make R available from Python
 
 ```python
 
-from polyester.rinterpreter import RInterpreter
+from polyester import get_interpreter
 
 rpath = r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe"
-rlang = RInterpreter(rpath)
+r_process = get_interpreter("R", rpath)
 
 # Simple calculations
-value = rlang.eval("sin(100)")
-value2 = rlang.call("cos", value)
+value = r_process.eval("sin(100)")
+value2 = r_process.call("cos", value)
 print(f"{value.get(), value2.get()=}")
 
 # Bring a dataframe over from R to python
-iris_r = rlang.eval("iris")
+iris_r = r_process.eval("iris")
 iris_df = iris_r.to_df('polars')  # other back-ends like pandas are also supported
 print(iris_df)
 ```
@@ -36,9 +36,9 @@ Because:
 And unfortunately I'm stuck in a world where I have to Windows.
 Compared to rpy2 we aim for:
 
-- Stability over performance;
 - Windows support;
-- I'm also interested in supported other languages than R.
+- Performance is nice, but at this stage stability/simplicit is a more intermediate goal;
+- I'm also interested in supporting other languages than R.
 
 However, at some point this package may fall back to something like rpy2 if we can get it to work.
 
