@@ -1,5 +1,4 @@
-from polyester.pyinterpreter import PyInterpreter
-from polyester.utils import get_interpreter
+from polyester import get_interpreter
 
 
 def main():
@@ -22,12 +21,17 @@ def r_example():
 
 
 def py_example():
-    # interpreter = get_interpreter("py")
-    interpreter = PyInterpreter()
+    interpreter = get_interpreter("py")
     interpreter.exec("import math")
     interpreter.exec("cos = math.cos")
     value = interpreter.eval("math.sin(100)")
     value2 = interpreter.call("cos", value)
     print(f"{value.get(), value2.get()=}")
+
+    # Round-trip data to python and back
+    import polars as pl
+    df = pl.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+    df_py = interpreter.import_data(df)
+    print(df_py.to_df('polars'))
 
 main()

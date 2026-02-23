@@ -1,4 +1,5 @@
 import json
+import tempfile
 from typing import Type
 
 import narwhals as nw
@@ -18,6 +19,16 @@ class BaseInterpreter:
 
     def read(self):
         return json.loads(self._remote.stdout.readline())
+
+    def import_data(self, df, backend="polars"):
+        table = nw.from_native(df).to_arrow()
+
+        with tempfile.NamedTemporaryFile(delete=False, mode="wb") as tmp:
+            with ipc.new_stream(tmp, table.schema) as writer:
+                writer.write_table(table)
+
+        msg = self.cmd("import_arrow", path=tmp.name, backend=backend)
+        return self.remote_object(self, msg["id"])
 
     def cmd(self, cmd, **kwargs):
         self.write({"cmd": cmd, **kwargs})
@@ -46,17 +57,17 @@ class BaseInterpreter:
 
 class RemoteObject:
     def __init__(self, interpreter, id):
-        self._ip = interpreter
+        self._interpreter = interpreter
         self.id = id
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.id})"
 
     def get(self):
-        return self._ip.cmd("get", id=self.id)["value"]
+        return self._interpreter.cmd("get", id=self.id)["value"]
 
     def to_arrow(self):
-        msg = self._ip.cmd("export_arrow", id=self.id)
+        msg = self._interpreter.cmd("export_arrow", id=self.id)
 
         with open(msg["path"], "rb") as f:
             table = ipc.open_stream(f).read_all()
@@ -70,4 +81,4 @@ class RemoteObject:
         return self.to_arrow().to_pandas()
 
     def __del__(self):
-        self._ip.cmd("delete", id=self.id)
+        self._interpreter.cmd("delete", id=self.id)

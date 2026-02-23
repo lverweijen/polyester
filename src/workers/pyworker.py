@@ -9,6 +9,10 @@ Although it can be used for sandboxing or for calling a different python interpr
 
 import json
 import sys
+import tempfile
+import narwhals as nw
+
+import pyarrow.ipc as ipc
 
 
 class PyWorker:
@@ -29,18 +33,19 @@ class PyWorker:
                         response = self.handle_exec(msg)
                     case "get":
                         response = self.handle_get(msg)
-                    # case "assign":
-                    #     response = self.handle_assign(msg),
+                    case "assign":
+                        response = self.handle_assign(msg),
                     case "call":
                         response = self.handle_call(msg)
                     case "delete":
                         response = self.handle_delete(msg)
+                    case "import_arrow":
+                        response = self.handle_import_arrow(msg)
                     case "export_arrow":
                         response = self.handle_export_arrow(msg)
                     case unknown_cmd:
                         raise ValueError(f"Unknown command: {unknown_cmd}")
 
-            # print(f"{response=}")
             sys.stdout.write(json.dumps(response) + "\n")
             sys.stdout.flush()
 
@@ -69,175 +74,47 @@ class PyWorker:
         value = self.get(msg["id"])
         return {"status": "ok", "value": value}
 
+    def handle_assign(self, msg):
+        """Assign value to a name."""
+        name = msg["name"]
+        value = self.get(msg["id"])
+        self._env[name] = value
+        return {"status": "ok"}
+
     def handle_call(self, msg):
+        """Make a call."""
         f = self._env[msg['function']]
         args = [self.get(arg["ref"]) for arg in msg['args']]
         id = self.store(f(*args))
         return {"status": "ok", "id": id}
 
     def handle_delete(self, msg):
+        """Delete a value."""
         self.delete(msg["id"])
         return {"status": "ok"}
 
     def handle_export_arrow(self, msg):
-        pass
+        """Export value to dataframe."""
+        value = self.get(msg["id"])
+        table = nw.from_native(value).to_arrow()
+
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        with ipc.new_stream(tmp, table.schema) as writer:
+            writer.write_table(table)
+
+        return {"status": "ok", "path": tmp.name}
+
+    def handle_import_arrow(self, msg):
+        """Export dataframe."""
+        with open(msg["path"], "rb") as f:
+            table = ipc.open_stream(f).read_all()
+
+        backend = msg.get("backend") or "polars"
+        df = nw.from_arrow(table, backend=backend).to_native()
+        id = self.store(df)
+        return {"status": "ok", "id": id}
+
 
 if __name__ == '__main__':
     worker = PyWorker()
     worker.run()
-
-
-    # if (length(line) == 0) {
-    #   # Sys.sleep(0.01)
-    #   next
-    # }
-#
-# result
-#
-# }, error = function(e) {
-#     list(status = "error", message = as.character(e$message))
-# })
-#
-# writeLines(toJSON(response, auto_unbox = TRUE), con_out)
-# flush(con_out)
-# }
-#
-
-
-# suppressMessages({
-#     library(jsonlite)
-# library(uuid)
-# })
-#
-# # ----------------------------
-# # Remote object storage
-# # ----------------------------
-#
-# # emptyenv()	niets
-# # baseenv()	base R functies
-# # globalenv()	alles wat user geladen heeft
-# # .remote_env <- new.env(parent = emptyenv())
-# # .remote_env <- new.env(parent = emptyenv())
-# .remote_env <- new.env(parent = globalenv())
-#
-# generate_id <- function() {
-#     paste0(".", UUIDgenerate())
-# }
-#
-# store_object <- function(value) {
-#     id <- generate_id()
-# assign(id, value, envir = .remote_env)
-# return(id)
-# }
-#
-# get_object <- function(id) {
-# if (!exists(id, envir = .remote_env, inherits = FALSE)) {
-# stop(paste("Object not found:", id))
-# }
-# get(id, envir = .remote_env, inherits = FALSE)
-# }
-#
-# delete_object <- function(id) {
-# if (exists(id, envir = .remote_env, inherits = FALSE)) {
-# rm(list = id, envir = .remote_env)
-# }
-# TRUE
-# }
-#
-# # ----------------------------
-# # Command handlers
-# # ----------------------------
-#
-# handle_eval <- function(msg) {
-# value <- eval(parse(text = msg$code), envir = .remote_env)
-# id <- store_object(value)
-# list(status = "ok", id = id)
-# }
-#
-# handle_get <- function(msg) {
-# value <- get_object(msg$id)
-# list(status = "ok", value = value)
-# }
-#
-# handle_assign <- function(msg) {
-# value <- get_object(msg$id)
-# assign(msg$name, value, envir = .remote_env)
-# list(status = "ok")
-# }
-#
-# handle_call <- function(msg) {
-# fn <- match.fun(msg$`function`)
-#
-# args <- lapply(msg$args, function(arg) {
-# if (is.list(arg) && !is.null(arg$ref)) {
-#     get_object(arg$ref)
-# } else {
-#     arg
-# }
-# })
-#
-# result <- do.call(fn, args)
-# id <- store_object(result)
-#
-# list(status = "ok", id = id)
-# }
-#
-# handle_delete <- function(msg) {
-# delete_object(msg$id)
-# list(status = "ok")
-# }
-#
-# # For big dataframes
-# handle_export_arrow <- function(msg) {
-# library(arrow)
-#
-# df <- get_object(msg$id)
-#
-# path <- tempfile(fileext = ".arrow")
-# write_ipc_stream(df, path)
-#
-# list(status="ok", path=path)
-# }
-#
-# # ----------------------------
-# # Main loop
-# # ----------------------------
-#
-# con_in <- file("stdin", open = "r")
-# con_out <- stdout()
-#
-# while (TRUE) {
-# # print('start reading')
-# line <- readLines(con_in, n = 1, warn = FALSE)
-# # print(line)
-#
-# # if (length(line) == 0) {
-# #   # Sys.sleep(0.01)
-# #   next
-# # }
-# if (length(line) == 0) break;
-#
-# response <- tryCatch({
-#     msg <- fromJSON(line, simplifyVector = FALSE)
-#
-# result <- switch(
-#     msg$cmd,
-# eval   = handle_eval(msg),
-# get    = handle_get(msg),
-# assign = handle_assign(msg),
-# call   = handle_call(msg),
-# delete = handle_delete(msg),
-# export_arrow = handle_export_arrow(msg),
-# stop(paste("Unknown command:", msg$cmd))
-# )
-#
-# result
-#
-# }, error = function(e) {
-#     list(status = "error", message = as.character(e$message))
-# })
-#
-# writeLines(toJSON(response, auto_unbox = TRUE), con_out)
-# flush(con_out)
-# }
-#

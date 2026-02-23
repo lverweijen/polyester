@@ -103,6 +103,15 @@ handle_export_arrow <- function(msg) {
   list(status="ok", path=path)
 }
 
+handle_import_arrow <- function(msg) {
+  library(arrow)
+
+  result <- read_ipc_stream(msg$path)
+  id <- store_object(result)
+
+  list(status="ok", id=id)
+}
+
 # ----------------------------
 # Main loop
 # ----------------------------
@@ -133,6 +142,7 @@ while (TRUE) {
       call   = handle_call(msg),
       delete = handle_delete(msg),
       export_arrow = handle_export_arrow(msg),
+      import_arrow = handle_import_arrow(msg),
       stop(paste("Unknown command:", msg$cmd))
     )
 

@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from pathlib import Path
 
 from polyester.base.baseinterpreter import RemoteObject, BaseInterpreter
@@ -12,9 +13,8 @@ class PyInterpreter(BaseInterpreter):
     remote_object = RemotePyObject
 
     def __init__(self, path=None):  # vanilla
-        # TODO Later, we can use a real socket
         if path is None:
-            path = "python"
+            path = sys.executable
         process = subprocess.Popen(
             [path, "-u", WORKER_PATH],
             stdin=subprocess.PIPE,

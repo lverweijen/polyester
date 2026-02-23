@@ -44,10 +44,8 @@ However, at some point this package may fall back to something like rpy2 if we c
 
 ## TODO
 
-- [ ] Add `import_data` method.
-- [ ] Augment call-protocol
+- [ ] Augment handle_call
 - [ ] Support Julia
-- [ ] Add eval to R
 
 ## Maybes
 - [ ] Switch to socket
