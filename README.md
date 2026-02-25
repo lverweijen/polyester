@@ -45,10 +45,12 @@ However, at some point this package may fall back to something like rpy2 if we c
 ## TODO
 
 - [x] Work out insert
-- [ ] ProxyModule
+- [x] RemoteName
 - [ ] Simplify assign
 - [ ] Augment handle_call
 - [ ] Support Julia
+- [ ] df backend parameter
+- [ ] Real life example with ggplot?
 
 ## Maybes
 - [ ] Switch to socket

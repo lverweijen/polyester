@@ -9,15 +9,15 @@ def main():
 
 
 def r_example():
-    r = get_interpreter("r", r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
+    rlang = get_interpreter("R", r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
 
     # Try some simple calculations
-    value = r.eval("sin(100)")
-    value2 = r.call("cos", value)
+    value = rlang.eval("sin(100)")
+    value2 = rlang.call("cos", value)
     print(f"{value.get(), value2.get()=}")
 
-    # Bring a dataframe over from r to python
-    iris_r = r.eval("iris")
+    # Bring a dataframe over from Rlang to python
+    iris_r = rlang.eval("iris")
     iris_df = pd.DataFrame.from_arrow(iris_r.get())
     # iris_df = pl.DataFrame(iris_r.get())
     print(iris_df)

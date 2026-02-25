@@ -1,22 +1,23 @@
 from pathlib import Path
 
-from polyester.base.baseinterpreter import RemoteObject, BaseInterpreter, RemoteExpression, RemoteModule
-from polyester.base.channels import JsonChannel
+from polyester.interpreter import RemoteObject, Interpreter, RemoteName
+from polyester.channels import JsonChannel
 
 
 class RemoteRObject(RemoteObject):
     pass
 
 
-class RemoteRModule(RemoteModule):
+class RemoteRName(RemoteName):
     def __getattr__(self, item):
-        return RemoteExpression(f"{self.name}::{item}")
+        # TODO I'm not even really sure if this should use $ or @ or :: or . or something else
+        return RemoteRName(interpreter=self._interpreter, name=f"{self._name}${item}")
 
 
-class RInterpreter(BaseInterpreter):
+class RInterpreter(Interpreter):
     remote_object = RemoteRObject
-    remote_module = RemoteRModule
-    worker_path = Path(__file__).parent.parent / "workers/jsonworker.R"
+    remote_name = RemoteRName
+    worker_path = Path(__file__).parent / "workers/jsonworker.R"
 
     def __init__(self, interpreter_path):
         if interpreter_path is None:

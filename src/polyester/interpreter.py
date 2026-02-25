@@ -2,7 +2,7 @@ import abc
 import tempfile
 from abc import abstractmethod, ABCMeta
 from json import JSONDecodeError
-from typing import Type, Any
+from typing import Type
 
 import narwhals as nw
 import pyarrow.ipc as ipc
@@ -14,9 +14,9 @@ ARROW_PROTOCOLS = [
 ]
 
 
-class BaseInterpreter(metaclass=abc.ABCMeta):
+class Interpreter(metaclass=abc.ABCMeta):
     remote_object: Type["RemoteObject"]
-    remote_module: Type["RemoteModule"]
+    remote_name: Type["RemoteName"]
 
     def __init__(self, channel):
         self._channel = channel
@@ -61,9 +61,11 @@ class BaseInterpreter(metaclass=abc.ABCMeta):
                 table = ipc.open_stream(f).read_all()
             return table
 
-    def assign(self, name: str, value: Any):
-        obj = self.resolve_object(value)
-        self.cmd("assign", name=name, id=obj.id)
+    def __setitem__(self, name: str, item: "RemoteObject"):
+        self.cmd("assign", name=name, id=item.id)
+
+    def __getitem__(self, item) -> "RemoteName":
+        return self.remote_name(self, item)
 
     def eval(self, code: str):
         msg = self.cmd("eval", code=code)
@@ -79,14 +81,11 @@ class BaseInterpreter(metaclass=abc.ABCMeta):
         return self.remote_object(self, msg["id"])
 
     def resolve_object(self, obj) -> "RemoteObject":
-        if isinstance(obj, RemoteExpression):
-            obj = self.eval(obj.expression)
-        elif isinstance(obj, RemoteObject):
+        # if isinstance(obj, RemoteExpression):
+        #     obj = self.eval(obj.expression)
+        if isinstance(obj, RemoteObject):
             obj = self.insert(obj)
         return obj
-
-    def get_module(self, name) -> "RemoteModule":
-        return self.remote_module(self, name)
 
 
 class RemoteObject:
@@ -104,16 +103,11 @@ class RemoteObject:
         self._interpreter.cmd("delete", id=self.id)
 
 
-class RemoteExpression:
-    def __init__(self, expression: str):
-        self.expression = expression
-
-
-class RemoteModule(metaclass=ABCMeta):
-    def __init__(self, interpreter: BaseInterpreter, name: str):
+class RemoteName(metaclass=ABCMeta):
+    def __init__(self, interpreter: Interpreter, name: str):
         self._name = name
         self._interpreter = interpreter
 
     @abstractmethod
-    def __getattr__(self, item) -> RemoteExpression:
+    def __getattr__(self, item) -> "RemoteName":
         ...

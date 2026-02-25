@@ -1,22 +1,22 @@
 import sys
 from pathlib import Path
 
-from polyester.base.baseinterpreter import RemoteObject, RemoteExpression, BaseInterpreter
-from polyester.base.channels import JsonChannel
+from polyester.interpreter import RemoteObject, Interpreter, RemoteName
+from polyester.channels import JsonChannel
 
 class RemotePyObject(RemoteObject):
     pass
 
 
-class RemotePyModule:
+class RemotePyName(RemoteName):
     def __getattr__(self, item):
-        return RemoteExpression(f"{self.name}.{item}")
+        return RemotePyName(self._interpreter, f"{self._name}.{item}")
 
 
-class PyInterpreter(BaseInterpreter):
+class PyInterpreter(Interpreter):
     remote_object = RemotePyObject
-    remote_module = RemotePyModule
-    worker_path = Path(__file__).parent.parent / "workers/pyworker.py"
+    remote_name = RemotePyName
+    worker_path = Path(__file__).parent / "workers/pyworker.py"
 
     def __init__(self, interpreter_path=None):
         if interpreter_path is None:

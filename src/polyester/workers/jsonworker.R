@@ -1,8 +1,5 @@
 #!/usr/bin/env Rscript
 
-# I don't know R. I generated this using chatgpt.
-# I hope it doesn't format my hard drive, lol :-P
-
 suppressMessages({
   library(jsonlite)
   library(uuid)
@@ -131,14 +128,7 @@ con_in <- file("stdin", open = "r")
 con_out <- stdout()
 
 while (TRUE) {
-    # print('start reading')
   line <- readLines(con_in, n = 1, warn = FALSE)
-  # print(line)
-
-  # if (length(line) == 0) {
-  #   # Sys.sleep(0.01)
-  #   next
-  # }
   if (length(line) == 0) break;
 
   response <- tryCatch({
@@ -153,11 +143,8 @@ while (TRUE) {
       call   = handle_call(msg),
       delete = handle_delete(msg),
       insert = handle_insert(msg),
-      # export_arrow = handle_export_arrow(msg),
-      # import_arrow = handle_import_arrow(msg),
       stop(paste("Unknown command:", msg$cmd))
     )
-
     result
 
   }, error = function(e) {
