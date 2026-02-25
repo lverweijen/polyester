@@ -1,28 +1,26 @@
-import subprocess
 from pathlib import Path
 
-from polyester.base.baseinterpreter import RemoteObject, BaseInterpreter
+from polyester.base.baseinterpreter import RemoteObject, BaseInterpreter, RemoteExpression, RemoteModule
+from polyester.base.channels import JsonChannel
 
-WORKER_PATH = Path(__file__).parent.parent / "workers/jsonworker.R"
 
 class RemoteRObject(RemoteObject):
     pass
 
+
+class RemoteRModule(RemoteModule):
+    def __getattr__(self, item):
+        return RemoteExpression(f"{self.name}::{item}")
+
+
 class RInterpreter(BaseInterpreter):
     remote_object = RemoteRObject
+    remote_module = RemoteRModule
+    worker_path = Path(__file__).parent.parent / "workers/jsonworker.R"
 
-    def __init__(self, path=None):
-        if path is None:
-            path = "Rscript"
+    def __init__(self, interpreter_path):
+        if interpreter_path is None:
+            interpreter_path = "Rscript"
 
-        socket = subprocess.Popen(
-            [path, "--vanilla", WORKER_PATH],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            text=True,
-            bufsize=1
-        )
-        super().__init__(socket)
-
-class RemotePyObject(RemoteObject):
-    pass
+        channel = JsonChannel([interpreter_path, "--vanilla", self.worker_path])
+        super().__init__(channel)

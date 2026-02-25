@@ -45,6 +45,7 @@ However, at some point this package may fall back to something like rpy2 if we c
 ## TODO
 
 - [x] Work out insert
+- [ ] ProxyModule
 - [ ] Simplify assign
 - [ ] Augment handle_call
 - [ ] Support Julia

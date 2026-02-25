@@ -1,5 +1,6 @@
-import json
+import abc
 import tempfile
+from abc import abstractmethod, ABCMeta
 from json import JSONDecodeError
 from typing import Type, Any
 
@@ -12,28 +13,22 @@ ARROW_PROTOCOLS = [
     "__arrow_c_stream__"
 ]
 
-class BaseInterpreter:
-    remote_object: Type["RemoteObject"]
 
-    def __init__(self, socket):
-        self._remote = socket
+class BaseInterpreter(metaclass=abc.ABCMeta):
+    remote_object: Type["RemoteObject"]
+    remote_module: Type["RemoteModule"]
+
+    def __init__(self, channel):
+        self._channel = channel
 
     def cmd(self, cmd, **kwargs):
-        self._write({"cmd": cmd, **kwargs})
-        msg = self._read()
+        self._channel.write({"cmd": cmd, **kwargs})
+        msg = self._channel.read()
         status = msg["status"]
         if status == "ok":
             return msg
         else:
             raise ValueError(f"{msg}")
-
-    def _write(self, msg):
-        msg = json.dumps(msg)
-        self._remote.stdin.write(msg)
-        self._remote.stdin.write("\n")
-
-    def _read(self):
-        return json.loads(self._remote.stdout.readline())
 
     def insert(self, data, target_type=None):
         """Insert data.
@@ -67,12 +62,10 @@ class BaseInterpreter:
             return table
 
     def assign(self, name: str, value: Any):
-        if value is not RemoteObject:
-            value = self.insert(value)
+        obj = self.resolve_object(value)
+        self.cmd("assign", name=name, id=obj.id)
 
-        self.cmd("assign", name=name, id=value.id)
-
-    def eval(self, code):
+    def eval(self, code: str):
         msg = self.cmd("eval", code=code)
         return self.remote_object(self, msg["id"])
 
@@ -84,6 +77,16 @@ class BaseInterpreter:
         args = [{'ref': arg.id} for arg in args]
         msg = self.cmd("call", function=function, args=args)
         return self.remote_object(self, msg["id"])
+
+    def resolve_object(self, obj) -> "RemoteObject":
+        if isinstance(obj, RemoteExpression):
+            obj = self.eval(obj.expression)
+        elif isinstance(obj, RemoteObject):
+            obj = self.insert(obj)
+        return obj
+
+    def get_module(self, name) -> "RemoteModule":
+        return self.remote_module(self, name)
 
 
 class RemoteObject:
@@ -99,3 +102,18 @@ class RemoteObject:
 
     def __del__(self):
         self._interpreter.cmd("delete", id=self.id)
+
+
+class RemoteExpression:
+    def __init__(self, expression: str):
+        self.expression = expression
+
+
+class RemoteModule(metaclass=ABCMeta):
+    def __init__(self, interpreter: BaseInterpreter, name: str):
+        self._name = name
+        self._interpreter = interpreter
+
+    @abstractmethod
+    def __getattr__(self, item) -> RemoteExpression:
+        ...
