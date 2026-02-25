@@ -1,23 +1,28 @@
 # Protocol for workers
 
-## Eval
+## Insert
 
-### Python → R:
-
+Python to R
 ```json
-{"cmd":"eval","code":"sin(5)"}
+{"cmd":"insert","value": 5}
+{"cmd":"insert","path": "/tmp/blabla"}
 ```
 
-### R → Python:
-
+R to Python
 ```json
-{"status":"ok","id":".550e8400-e29b-41d4-a716-446655440000"}
+{"status":"ok","id": ".5503..."}
 ```
 
 ## Get
 
 ```json
 {"cmd":"get","id":".550e..."}
+```
+
+## Delete
+
+```json
+{"cmd":"delete","id":".550e..."}
 ```
 
 ## Assign
@@ -36,11 +41,6 @@
 }
 ```
 
-## Delete
-
-```json
-{"cmd":"delete","id":".550e..."}
-```
 
 ## Data transfer
 
@@ -52,3 +52,18 @@
 `backend` is reserved if there are multiple dataframe representations.
 In Python, there is pandas and polars.
 In R, there is dataframe, tibble and data.table.
+
+## Eval / exec
+
+Python → R:
+
+```json
+{"cmd":"eval","code":"sin(5)"}
+```
+
+R → Python:
+
+```json
+{"status":"ok","id":".550e8400-e29b-41d4-a716-446655440000"}
+```
+

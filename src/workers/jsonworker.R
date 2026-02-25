@@ -59,8 +59,17 @@ handle_exec <- function(msg) {
 }
 
 handle_get <- function(msg) {
+  library(arrow)
   value <- get_object(msg$id)
-  list(status = "ok", value = value)
+
+  if (is.data.frame(value)) {
+      df <- get_object(msg$id)
+      path <- tempfile(fileext = ".arrow")
+      write_ipc_stream(df, path)
+      list(status="ok", encoding="arrow", path=path)
+  } else {
+      list(status = "ok", value = value)
+  }
 }
 
 handle_assign <- function(msg) {
@@ -103,8 +112,10 @@ handle_export_arrow <- function(msg) {
   list(status="ok", path=path)
 }
 
-handle_import_arrow <- function(msg) {
+handle_insert <- function(msg) {
   library(arrow)
+
+  # TODO Handle raw value
 
   result <- read_ipc_stream(msg$path)
   id <- store_object(result)
@@ -141,8 +152,9 @@ while (TRUE) {
       assign = handle_assign(msg),
       call   = handle_call(msg),
       delete = handle_delete(msg),
-      export_arrow = handle_export_arrow(msg),
-      import_arrow = handle_import_arrow(msg),
+      insert = handle_insert(msg),
+      # export_arrow = handle_export_arrow(msg),
+      # import_arrow = handle_import_arrow(msg),
       stop(paste("Unknown command:", msg$cmd))
     )
 

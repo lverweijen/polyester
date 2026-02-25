@@ -14,6 +14,12 @@ import narwhals as nw
 
 import pyarrow.ipc as ipc
 
+ARROW_PROTOCOLS = [
+    "__arrow_c_schema__",
+    "__arrow_c_array__",
+    "__arrow_c_stream__"
+]
+
 
 class PyWorker:
     def __init__(self):
@@ -33,16 +39,14 @@ class PyWorker:
                         response = self.handle_exec(msg)
                     case "get":
                         response = self.handle_get(msg)
+                    case "insert":
+                        response = self.handle_insert(msg)
+                    case "delete":
+                        response = self.handle_delete(msg)
                     case "assign":
                         response = self.handle_assign(msg),
                     case "call":
                         response = self.handle_call(msg)
-                    case "delete":
-                        response = self.handle_delete(msg)
-                    case "import_arrow":
-                        response = self.handle_import_arrow(msg)
-                    case "export_arrow":
-                        response = self.handle_export_arrow(msg)
                     case unknown_cmd:
                         raise ValueError(f"Unknown command: {unknown_cmd}")
 
@@ -69,10 +73,38 @@ class PyWorker:
         exec(msg["code"], self._env)
         return {"status": "ok"}
 
+    def handle_insert(self, msg):
+        """Import value."""
+
+        # TODO Support regular value in addition to arrow
+
+        with open(msg["path"], "rb") as f:
+            table = ipc.open_stream(f).read_all()
+
+        backend = msg.get("type") or "polars"
+        df = nw.from_arrow(table, backend=backend).to_native()
+        id = self.store(df)
+        return {"status": "ok", "id": id}
+
     def handle_get(self, msg):
         """Retrieve a stored value."""
         value = self.get(msg["id"])
-        return {"status": "ok", "value": value}
+
+        if any(hasattr(value, protocol) for protocol in ARROW_PROTOCOLS):
+            table = nw.from_native(value).to_arrow()
+
+            tmp = tempfile.NamedTemporaryFile(suffix=".arrow", delete=False)
+            with ipc.new_stream(tmp, table.schema) as writer:
+                writer.write_table(table)
+
+            return {"status": "ok", "encoding": "arrow", "path": tmp.name}
+        else:
+            return {"status": "ok", "value": value}
+
+    def handle_delete(self, msg):
+        """Delete a value."""
+        self.delete(msg["id"])
+        return {"status": "ok"}
 
     def handle_assign(self, msg):
         """Assign value to a name."""
@@ -86,32 +118,6 @@ class PyWorker:
         f = self._env[msg['function']]
         args = [self.get(arg["ref"]) for arg in msg['args']]
         id = self.store(f(*args))
-        return {"status": "ok", "id": id}
-
-    def handle_delete(self, msg):
-        """Delete a value."""
-        self.delete(msg["id"])
-        return {"status": "ok"}
-
-    def handle_export_arrow(self, msg):
-        """Export value to dataframe."""
-        value = self.get(msg["id"])
-        table = nw.from_native(value).to_arrow()
-
-        tmp = tempfile.NamedTemporaryFile(delete=False)
-        with ipc.new_stream(tmp, table.schema) as writer:
-            writer.write_table(table)
-
-        return {"status": "ok", "path": tmp.name}
-
-    def handle_import_arrow(self, msg):
-        """Export dataframe."""
-        with open(msg["path"], "rb") as f:
-            table = ipc.open_stream(f).read_all()
-
-        backend = msg.get("backend") or "polars"
-        df = nw.from_arrow(table, backend=backend).to_native()
-        id = self.store(df)
         return {"status": "ok", "id": id}
 
 
