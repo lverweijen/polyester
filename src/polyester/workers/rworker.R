@@ -26,11 +26,33 @@ store_object <- function(value) {
   return(id)
 }
 
-get_object <- function(id) {
+get_object_id <- function(id) {
   if (!exists(id, envir = .remote_env, inherits = FALSE)) {
     stop(paste("Object not found:", id))
   }
   get(id, envir = .remote_env, inherits = FALSE)
+}
+
+get_function <- function(obj_msg) {
+  if (!is.null(obj_msg$name)) {
+    # This needs to handle symbols like ::, $, @
+    # I don't know how to do this without eval
+    eval(parse(text = obj_msg$name), envir = .remote_env)
+  } else {
+    get_object(obj_msg)
+  }
+}
+
+get_object <- function(obj_msg) {
+  if (!is.null(obj_msg$id)) {
+    get_object_id(obj_msg$id)
+  } else if (!is.null(obj_msg$name)) {
+    get_object_id(obj_msg$name)
+  } else if (!is.null(obj_msg$value)) {
+    obj_msg$value
+  } else {
+    stop(paste("Unable to resolve:", msg, "to object."))
+  }
 }
 
 delete_object <- function(id) {
@@ -55,12 +77,13 @@ handle_exec <- function(msg) {
   list(status = "ok")
 }
 
+# TODO By name
 handle_get <- function(msg) {
   library(arrow)
-  value <- get_object(msg$id)
+  value <- get_object(msg)
 
   if (is.data.frame(value)) {
-      df <- get_object(msg$id)
+      df <- get_object(msg)
       path <- tempfile(fileext = ".arrow")
       write_ipc_stream(df, path)
       list(status="ok", encoding="arrow", path=path)
@@ -70,25 +93,16 @@ handle_get <- function(msg) {
 }
 
 handle_assign <- function(msg) {
-  value <- get_object(msg$id)
+  value <- get_object(msg)
   assign(msg$name, value, envir = .remote_env)
   list(status = "ok")
 }
 
 handle_call <- function(msg) {
-  fn <- match.fun(msg$`function`)
-
-  args <- lapply(msg$args, function(arg) {
-    if (is.list(arg) && !is.null(arg$ref)) {
-      get_object(arg$ref)
-    } else {
-      arg
-    }
-  })
-
+  fn <- get_function(msg$`function`)
+  args <- lapply(msg$args, get_object)
   result <- do.call(fn, args)
   id <- store_object(result)
-
   list(status = "ok", id = id)
 }
 
@@ -97,25 +111,22 @@ handle_delete <- function(msg) {
   list(status = "ok")
 }
 
-# For big dataframes
-handle_export_arrow <- function(msg) {
-  library(arrow)
-
-  df <- get_object(msg$id)
-
-  path <- tempfile(fileext = ".arrow")
-  write_ipc_stream(df, path)
-
-  list(status="ok", path=path)
-}
-
 handle_insert <- function(msg) {
+  # if (!requireNamespace("arrow", quietly = TRUE)) {
+  #   stop("arrow package not installed")
+  # }
+
   library(arrow)
 
   # TODO Handle raw value
 
   result <- read_ipc_stream(msg$path)
   id <- store_object(result)
+
+  # Clean up
+  if (file.exists(msg$path)) {
+    unlink(msg$path)
+  }
 
   list(status="ok", id=id)
 }

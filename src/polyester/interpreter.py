@@ -1,8 +1,8 @@
 import abc
+import os
 import tempfile
-from abc import abstractmethod, ABCMeta
 from json import JSONDecodeError
-from typing import Type
+from typing import Type, Any
 
 import narwhals as nw
 import pyarrow.ipc as ipc
@@ -21,7 +21,16 @@ class Interpreter(metaclass=abc.ABCMeta):
     def __init__(self, channel):
         self._channel = channel
 
-    def cmd(self, cmd, **kwargs):
+    def __getitem__(self, item: str) -> "RemoteName":
+        return self.remote_name(self, item)
+
+    def __setitem__(self, name: str, source: "Remote"):
+        self.cmd("assign", target=name, source=source.to_dict())
+
+    def module(self, name: str) -> Any:
+        raise NotImplementedError("This interpreter doesn't support modules.")
+
+    def cmd(self, cmd: str, **kwargs) -> dict:
         self._channel.write({"cmd": cmd, **kwargs})
         msg = self._channel.read()
         status = msg["status"]
@@ -30,7 +39,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         else:
             raise ValueError(f"{msg}")
 
-    def insert(self, data, target_type=None):
+    def insert(self, data: Any, target_type=None) -> "RemoteObject":
         """Insert data.
 
         This either writes the data to a temporary file or encodes it in the json.
@@ -51,63 +60,82 @@ class Interpreter(metaclass=abc.ABCMeta):
 
         return self.remote_object(self, msg["id"])
 
-    def get(self, id):
-        msg = self.cmd("get", id=id)
-
+    def get(self, obj: "Remote", backend=None) -> Any:
+        msg = self.cmd("get", **obj.to_dict())
         try:
-            return msg["value"]
+            value = msg["value"]
         except KeyError:
             with open(msg["path"], "rb") as f:
-                table = ipc.open_stream(f).read_all()
-            return table
+                value = ipc.open_stream(f).read_all()
 
-    def __setitem__(self, name: str, item: "RemoteObject"):
-        self.cmd("assign", name=name, id=item.id)
+            try:
+                os.remove(msg["path"])
+            except OSError:
+                pass
 
-    def __getitem__(self, item) -> "RemoteName":
-        return self.remote_name(self, item)
+        return value
 
-    def eval(self, code: str):
+    def call(self, function: "Remote", /, *args, **kwargs) -> "RemoteObject":
+        packed_function = function.to_dict()
+        packed_args = list(map(self._prepare_arg, args))
+        packed_kwargs = {k: self._prepare_arg(v) for k, v in kwargs.items()}
+        msg = self.cmd("call", function=packed_function, args=packed_args, kwargs=packed_kwargs)
+        return RemoteObject(self, msg["id"])
+
+    @staticmethod
+    def _prepare_arg(obj) -> dict:
+        if isinstance(obj, Remote):
+            return obj.to_dict()
+        else:
+            return {'value': obj}
+
+    def eval(self, code: str) -> "RemoteObject":
         msg = self.cmd("eval", code=code)
         return self.remote_object(self, msg["id"])
 
-    def exec(self, code):
+    def exec(self, code: str) -> None:
         self.cmd("exec", code=code)
 
-    def call(self, function, *args):
-        # TODO
-        args = [{'ref': arg.id} for arg in args]
-        msg = self.cmd("call", function=function, args=args)
-        return self.remote_object(self, msg["id"])
 
-    def resolve_object(self, obj) -> "RemoteObject":
-        # if isinstance(obj, RemoteExpression):
-        #     obj = self.eval(obj.expression)
-        if isinstance(obj, RemoteObject):
-            obj = self.insert(obj)
-        return obj
+class Remote(metaclass=abc.ABCMeta):
+    _interpreter: Interpreter
+
+    @abc.abstractmethod
+    def to_dict(self):
+        pass
+
+    def get(self, backend=None):
+        return self._interpreter.get(self)
+
+    def __call__(self, *args, **kwargs):
+        return self._interpreter.call(self, *args, **kwargs)
 
 
-class RemoteObject:
+class RemoteObject(Remote):
     def __init__(self, interpreter, id):
         self._interpreter = interpreter
         self.id = id
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.id})"
+        return f"{self.__class__.__name__}{self._interpreter, self.id})"
 
-    def get(self):
-        return self._interpreter.get(self.id)
+    def to_dict(self):
+        return {"id": self.id}
 
     def __del__(self):
         self._interpreter.cmd("delete", id=self.id)
 
 
-class RemoteName(metaclass=ABCMeta):
+class RemoteName(Remote):
     def __init__(self, interpreter: Interpreter, name: str):
-        self._name = name
         self._interpreter = interpreter
+        self.name = name
 
-    @abstractmethod
+    def __repr__(self):
+        return f"{self.__class__.__name__}{self._interpreter, self.name}"
+
+    def to_dict(self):
+        return {"name": self.name}
+
     def __getattr__(self, item) -> "RemoteName":
-        ...
+        raise NotImplementedError(f"Attributes are not implemented for {type(self._interpreter).__name__}")

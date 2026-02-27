@@ -5,7 +5,7 @@
 Python to R
 ```json
 {"cmd":"insert","value": 5}
-{"cmd":"insert","path": "/tmp/blabla"}
+{"cmd":"insert","path": "/tmp/blabla.arrow","encoding": "arrow"}
 ```
 
 R to Python
@@ -17,6 +17,7 @@ R to Python
 
 ```json
 {"cmd":"get","id":".550e..."}
+{"cmd":"get","name":"dplyr::bind_rows"}
 ```
 
 ## Delete
@@ -31,29 +32,37 @@ R to Python
 {"cmd":"assign","id":".550e...","name":"a"}
 ```
 
+**TODO**
+Alternative
+```json
+{"cmd":"assign","target":"a","source":{"id":".550e..."}}
+{"cmd":"assign","target":"a","source":{"name":"b"}}
+{"cmd":"assign","target":"a","source":{"value":[1,2,3]}}
+```
+
 ## Call
 
 ```json
 {
   "cmd":"call",
-  "function":"mean",
-  "args":[{"ref":".550e..."}]
+  "function":{"name":"mean"},
+  "args":[{"id":".550e..."},{"name":"a"}{"value":5}]
 }
 ```
 
-
-## Data transfer
+## Exec
 
 ```json
-{"cmd":"import_arrow","path":"file.arrow","backend":null}
-{"cmd":"export_arrow","id": ".550e..."}
+{"cmd":"exec","code":"import math"}
 ```
 
-`backend` is reserved if there are multiple dataframe representations.
-In Python, there is pandas and polars.
-In R, there is dataframe, tibble and data.table.
+R → Python:
 
-## Eval / exec
+```json
+{"status":"ok"}
+```
+
+## Eval
 
 Python → R:
 
@@ -66,4 +75,3 @@ R → Python:
 ```json
 {"status":"ok","id":".550e8400-e29b-41d4-a716-446655440000"}
 ```
-

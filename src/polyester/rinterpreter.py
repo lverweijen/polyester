@@ -10,14 +10,34 @@ class RemoteRObject(RemoteObject):
 
 class RemoteRName(RemoteName):
     def __getattr__(self, item):
-        # TODO I'm not even really sure if this should use $ or @ or :: or . or something else
-        return RemoteRName(interpreter=self._interpreter, name=f"{self._name}${item}")
+        raise NotImplementedError("Ambiguous attribute. Use `obj.dcolon/dollar/at(name)` instead.")
+
+    def dcolon(self, name):
+        """Insert double colon in name."""
+        return RemoteRName(interpreter=self._interpreter, name=f"{self.name}::{name}")
+
+    def dollar(self, name):
+        """Insert dollar in name."""
+        return RemoteRName(interpreter=self._interpreter, name=f"{self.name}${name}")
+
+    def at(self, name):
+        """Access S4 slot."""
+        return RemoteRName(interpreter=self._interpreter, name=f"{self.name}@{name}")
+
+
+class RModule:
+    def __init__(self, interpreter: Interpreter, name: str):
+        self._name = name
+        self._interpreter = interpreter
+
+    def __getattr__(self, item) -> RemoteName:
+        return self._interpreter[f"{self._name}::{item}"]
 
 
 class RInterpreter(Interpreter):
     remote_object = RemoteRObject
     remote_name = RemoteRName
-    worker_path = Path(__file__).parent / "workers/jsonworker.R"
+    worker_path = Path(__file__).parent / "workers/rworker.R"
 
     def __init__(self, interpreter_path):
         if interpreter_path is None:
@@ -25,3 +45,6 @@ class RInterpreter(Interpreter):
 
         channel = JsonChannel([interpreter_path, "--vanilla", self.worker_path])
         super().__init__(channel)
+
+    def module(self, name: str) -> RModule:
+        return RModule(self, name)

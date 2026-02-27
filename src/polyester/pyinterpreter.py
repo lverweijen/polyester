@@ -10,7 +10,7 @@ class RemotePyObject(RemoteObject):
 
 class RemotePyName(RemoteName):
     def __getattr__(self, item):
-        return RemotePyName(self._interpreter, f"{self._name}.{item}")
+        return RemotePyName(self._interpreter, f"{self.name}.{item}")
 
 
 class PyInterpreter(Interpreter):
@@ -23,3 +23,7 @@ class PyInterpreter(Interpreter):
             interpreter_path = sys.executable
         channel = JsonChannel([interpreter_path, "-u", self.worker_path])
         super().__init__(channel)
+
+    def module(self, name):
+        self.exec(f"import {name}")
+        return self[name]

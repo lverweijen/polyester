@@ -8,6 +8,7 @@ Although it can be used for sandboxing or for calling a different python interpr
 """
 
 import json
+import os
 import sys
 import tempfile
 import narwhals as nw
@@ -32,40 +33,56 @@ class PyWorker:
             except json.JSONDecodeError as err:
                 response = {"status": "error", "message": str(err)}
             else:
-                match msg["cmd"]:
-                    case "eval":
-                        response = self.handle_eval(msg)
-                    case "exec":
-                        response = self.handle_exec(msg)
-                    case "get":
-                        response = self.handle_get(msg)
-                    case "insert":
-                        response = self.handle_insert(msg)
-                    case "delete":
-                        response = self.handle_delete(msg)
-                    case "assign":
-                        response = self.handle_assign(msg),
-                    case "call":
-                        response = self.handle_call(msg)
-                    case unknown_cmd:
-                        raise ValueError(f"Unknown command: {unknown_cmd}")
+                try:
+                    match msg["cmd"]:
+                        case "eval":
+                            response = self.handle_eval(msg)
+                        case "exec":
+                            response = self.handle_exec(msg)
+                        case "get":
+                            response = self.handle_get(msg)
+                        case "insert":
+                            response = self.handle_insert(msg)
+                        case "delete":
+                            response = self.handle_delete(msg)
+                        case "assign":
+                            response = self.handle_assign(msg),
+                        case "call":
+                            response = self.handle_call(msg)
+                        case unknown_cmd:
+                            raise ValueError(f"Unknown command: {unknown_cmd}")
+                except Exception as err:
+                    response = {"status": "err", "message": str(err)}
 
             sys.stdout.write(json.dumps(response) + "\n")
             sys.stdout.flush()
 
-    def store(self, value):
+    def store_obj(self, value):
+        """Store object in memory."""
         self._env['_' + hex(id(value))] = value
         return id(value)
 
-    def get(self, id):
-        return self._env['_' + hex(id)]
+    def resolve_obj(self, data):
+        """Retrieve object from memory."""
+        if "id" in data:
+            return self._env['_' + hex(data['id'])]
+        elif "name" in data:
+            name_parts = iter(data['name'].split('.'))
+            obj = self._env[next(name_parts)]
+            for part in name_parts:
+                obj = getattr(obj, part)
+            return obj
+        elif "value" in data:
+            return data['value']
+        else:
+            raise ValueError(f"Unable to resolve object: {data}")
 
     def delete(self, id):
         del self._env['_' + hex(id)]
 
     def handle_eval(self, msg):
         """Evaluate expression and store."""
-        id = self.store(eval(msg["code"], self._env))
+        id = self.store_obj(eval(msg["code"], self._env))
         return {"status": "ok", "id": id}
 
     def handle_exec(self, msg):
@@ -76,19 +93,25 @@ class PyWorker:
     def handle_insert(self, msg):
         """Import value."""
 
-        # TODO Support regular value in addition to arrow
+        if "path" in msg:
+            with open(msg["path"], "rb") as f:
+                table = ipc.open_stream(f).read_all()
+            backend = msg.get("type") or "polars"
+            obj = nw.from_arrow(table, backend=backend).to_native()
 
-        with open(msg["path"], "rb") as f:
-            table = ipc.open_stream(f).read_all()
+            try:
+                os.remove(msg["path"])
+            except OSError:
+                pass
+        else:
+            obj = msg["value"]
 
-        backend = msg.get("type") or "polars"
-        df = nw.from_arrow(table, backend=backend).to_native()
-        id = self.store(df)
+        id = self.store_obj(obj)
         return {"status": "ok", "id": id}
 
     def handle_get(self, msg):
         """Retrieve a stored value."""
-        value = self.get(msg["id"])
+        value = self.resolve_obj(msg)
 
         if any(hasattr(value, protocol) for protocol in ARROW_PROTOCOLS):
             table = nw.from_native(value).to_arrow()
@@ -108,16 +131,16 @@ class PyWorker:
 
     def handle_assign(self, msg):
         """Assign value to a name."""
-        name = msg["name"]
-        value = self.get(msg["id"])
-        self._env[name] = value
+        target = msg["target"]
+        source = self.resolve_obj(msg["source"])
+        self._env[target] = source
         return {"status": "ok"}
 
     def handle_call(self, msg):
         """Make a call."""
-        f = self._env[msg['function']]
-        args = [self.get(arg["ref"]) for arg in msg['args']]
-        id = self.store(f(*args))
+        f = self.resolve_obj(msg['function'])
+        args = [self.resolve_obj(arg) for arg in msg['args']]
+        id = self.store_obj(f(*args))
         return {"status": "ok", "id": id}
 
 
