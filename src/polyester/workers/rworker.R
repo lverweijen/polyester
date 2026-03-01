@@ -100,7 +100,7 @@ handle_assign <- function(msg) {
 
 handle_call <- function(msg) {
   fn <- get_function(msg$`function`)
-  args <- lapply(msg$args, get_object)
+  args <- lapply(c(msg$args, msg$kwargs), get_object)
   result <- do.call(fn, args)
   id <- store_object(result)
   list(status = "ok", id = id)

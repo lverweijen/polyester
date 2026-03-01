@@ -18,8 +18,9 @@ class Interpreter(metaclass=abc.ABCMeta):
     remote_object: Type["RemoteObject"]
     remote_name: Type["RemoteName"]
 
-    def __init__(self, channel):
+    def __init__(self, channel, df_backend='polars'):
         self._channel = channel
+        self.df_backend = df_backend
 
     def __getitem__(self, item: str) -> "RemoteName":
         return self.remote_name(self, item)
@@ -60,13 +61,14 @@ class Interpreter(metaclass=abc.ABCMeta):
 
         return self.remote_object(self, msg["id"])
 
-    def get(self, obj: "Remote", backend=None) -> Any:
+    def get(self, obj: "Remote", df_backend=None) -> Any:
         msg = self.cmd("get", **obj.to_dict())
         try:
             value = msg["value"]
         except KeyError:
             with open(msg["path"], "rb") as f:
-                value = ipc.open_stream(f).read_all()
+                arrow = ipc.open_stream(f).read_all()
+                value = nw.from_arrow(arrow, backend=df_backend or self.df_backend)
 
             try:
                 os.remove(msg["path"])
@@ -104,8 +106,8 @@ class Remote(metaclass=abc.ABCMeta):
     def to_dict(self):
         pass
 
-    def get(self, backend=None):
-        return self._interpreter.get(self)
+    def get(self, df_backend=None):
+        return self._interpreter.get(self, df_backend=df_backend)
 
     def __call__(self, *args, **kwargs):
         return self._interpreter.call(self, *args, **kwargs)

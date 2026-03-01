@@ -6,17 +6,16 @@ This package aims to make R available from Python
 
 from polyester import get_interpreter
 
-rpath = r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe"
-r_process = get_interpreter("R", rpath)
+rr = get_interpreter("R", path=r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
 
 # Simple calculations
-value = r_process.eval("sin(100)")
-value2 = r_process.call("cos", value)
+rvalue = rr.eval("sin(100)")
+rvalue2 = rr["cos"](value)
 print(f"{value.get(), value2.get()=}")
 
 # Bring a dataframe over from R to python
-iris_r = r_process.eval("iris")
-iris_df = iris_r.to_df('polars')  # other back-ends like pandas are also supported
+iris_rdf = rr.eval("iris")
+iris_df = iris_rdf.get()  # other back-ends like pandas are also supported
 print(iris_df)
 ```
 
