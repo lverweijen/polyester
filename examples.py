@@ -4,8 +4,8 @@ import pandas as pd
 
 
 def main():
-    # r_example()
-    # py_example()
+    r_example()
+    py_example()
     tidyr_example()
 
 
