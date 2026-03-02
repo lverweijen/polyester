@@ -8,3 +8,4 @@ dependencies = [
     "narwhals>=2.16.0",
     "pyarrow>=23.0.1",
 ]
+license = "Apache-2.0"
