@@ -93,8 +93,8 @@ handle_get <- function(msg) {
 }
 
 handle_assign <- function(msg) {
-  value <- get_object(msg)
-  assign(msg$name, value, envir = .remote_env)
+  value <- get_object(msg$source)
+  assign(msg$target, value, envir = .remote_env)
   list(status = "ok")
 }
 

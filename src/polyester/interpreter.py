@@ -15,6 +15,7 @@ ARROW_PROTOCOLS = [
 
 
 class Interpreter(metaclass=abc.ABCMeta):
+    """Representation of remote interpreter."""
     remote_object: Type["RemoteObject"]
     remote_name: Type["RemoteName"]
 
@@ -100,6 +101,7 @@ class Interpreter(metaclass=abc.ABCMeta):
 
 
 class Remote(metaclass=abc.ABCMeta):
+    """Representation of something remote to the interpreter."""
     _interpreter: Interpreter
 
     @abc.abstractmethod
@@ -114,6 +116,7 @@ class Remote(metaclass=abc.ABCMeta):
 
 
 class RemoteObject(Remote):
+    """Representation of remote Object."""
     def __init__(self, interpreter, id):
         self._interpreter = interpreter
         self.id = id
@@ -129,6 +132,7 @@ class RemoteObject(Remote):
 
 
 class RemoteName(Remote):
+    """Representation of remote Name."""
     def __init__(self, interpreter: Interpreter, name: str):
         self._interpreter = interpreter
         self.name = name
