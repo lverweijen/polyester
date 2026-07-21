@@ -69,7 +69,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         except KeyError:
             with open(msg["path"], "rb") as f:
                 arrow = ipc.open_stream(f).read_all()
-                value = nw.from_arrow(arrow, backend=df_backend or self.df_backend)
+                value = nw.from_arrow(arrow, backend=df_backend or self.df_backend).to_native()
 
             try:
                 os.remove(msg["path"])
@@ -83,7 +83,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         packed_args = list(map(self._prepare_arg, args))
         packed_kwargs = {k: self._prepare_arg(v) for k, v in kwargs.items()}
         msg = self.cmd("call", function=packed_function, args=packed_args, kwargs=packed_kwargs)
-        return RemoteObject(self, msg["id"])
+        return self.remote_object(self, msg["id"])
 
     @staticmethod
     def _prepare_arg(obj) -> dict:
@@ -133,7 +133,7 @@ class RemoteObject(Remote):
 
 class RemoteName(Remote):
     """Representation of remote Name."""
-    def __init__(self, interpreter: Interpreter, name: str):
+    def __init__(self, interpreter: Interpreter, name: str, ns=None):
         self._interpreter = interpreter
         self.name = name
 

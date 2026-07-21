@@ -1,5 +1,6 @@
 import json
 import subprocess
+from json import JSONDecodeError
 
 
 class JsonChannel:
@@ -19,4 +20,8 @@ class JsonChannel:
         self._remote.stdin.write("\n")
 
     def read(self):
-        return json.loads(self._remote.stdout.readline())
+        l = self._remote.stdout.readline()
+        try:
+            return json.loads(l)
+        except JSONDecodeError:
+            raise Exception(f"Invalid message ({l}). Perhaps print to stderr, not stdout.")
