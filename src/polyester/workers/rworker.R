@@ -33,6 +33,16 @@ get_object_id <- function(id) {
   get(id, envir = .remote_env, inherits = FALSE)
 }
 
+#' Get an object from a namespace
+get_ns_object_id <- function(id, ns) {
+  # FIXME This returns FALSE: exists("sleepstudy", where = asNamespace("lme4"), inherits=FALSE)
+  if (!exists(id, where = asNamespace(ns))) {
+    stop(paste("Object not found:", id))
+  }
+  getFromNamespace(id, ns = ns)
+}
+
+# TODO Same as get_object??
 get_function <- function(obj_msg) {
   if (!is.null(obj_msg$name)) {
     # This needs to handle symbols like ::, $, @
@@ -47,7 +57,11 @@ get_object <- function(obj_msg) {
   if (!is.null(obj_msg$id)) {
     get_object_id(obj_msg$id)
   } else if (!is.null(obj_msg$name)) {
-    get_object_id(obj_msg$name)
+    if (!is.null(obj_msg$ns)) {
+      get_ns_object_id(obj_msg$name, ns = obj_msg$ns)
+    } else {
+      get_object_id(obj_msg$name)
+    }
   } else if (!is.null(obj_msg$value)) {
     obj_msg$value
   } else {

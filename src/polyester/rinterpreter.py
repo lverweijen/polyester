@@ -26,12 +26,20 @@ class RemoteRName(RemoteName):
 
 
 class RModule:
-    def __init__(self, interpreter: Interpreter, name: str):
-        self._name = name
+    def __init__(self, interpreter: Interpreter, ns: str = None):
+        self._ns = ns
         self._interpreter = interpreter
 
     def __getattr__(self, item) -> RemoteName:
-        return self._interpreter[f"{self._name}::{item}"]
+        ip = self._interpreter
+        return ip.remote_name(ip, item, ns=self._ns)
+
+    def __setattr__(self, key, value):
+        if key.startswith("_"):
+            object.__setattr__(self, key, value)
+        else:
+            ip = self._interpreter
+            ip.cmd("assign", target=key, ns=self._ns, source=value.to_dict())
 
 
 class RInterpreter(Interpreter):
@@ -45,6 +53,11 @@ class RInterpreter(Interpreter):
 
         channel = JsonChannel([interpreter_path, "--vanilla", self.worker_path])
         super().__init__(channel)
+
+    def __getitem__(self, item):
+        if "::" in item:
+            ns, name = item.split("::", maxsplit=1)
+            return self.remote_name(name, ns=ns)
 
     def module(self, name: str) -> RModule:
         return RModule(self, name)

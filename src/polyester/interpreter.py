@@ -32,6 +32,10 @@ class Interpreter(metaclass=abc.ABCMeta):
     def module(self, name: str) -> Any:
         raise NotImplementedError("This interpreter doesn't support modules.")
 
+    @property
+    def objects(self):
+        return self.module(None)
+
     def cmd(self, cmd: str, **kwargs) -> dict:
         self._channel.write({"cmd": cmd, **kwargs})
         msg = self._channel.read()
@@ -136,6 +140,7 @@ class RemoteName(Remote):
     def __init__(self, interpreter: Interpreter, name: str, ns=None):
         self._interpreter = interpreter
         self.name = name
+        self.ns = ns
 
     def __repr__(self):
         return f"{self.__class__.__name__}{self._interpreter, self.name}"
