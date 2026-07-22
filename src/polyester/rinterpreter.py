@@ -1,11 +1,13 @@
 from pathlib import Path
 
+from polyester.convert_r import to_r
 from polyester.interpreter import RemoteObject, Interpreter, RemoteName
 from polyester.channels import JsonChannel
 
 
 class RemoteRObject(RemoteObject):
-    pass
+    def to_code(self):
+        return f"`{self.id}`"
 
 
 class RemoteRName(RemoteName):
@@ -23,6 +25,12 @@ class RemoteRName(RemoteName):
     def at(self, name):
         """Access S4 slot."""
         return RemoteRName(interpreter=self._interpreter, name=f"{self.name}@{name}")
+
+    def to_code(self):
+        if self.ns:
+            return f"{self.ns}::{self.name}"
+        else:
+            return self.name
 
 
 class RModule:
@@ -58,6 +66,9 @@ class RInterpreter(Interpreter):
         if "::" in item:
             ns, name = item.split("::", maxsplit=1)
             return self.remote_name(name, ns=ns)
+
+    def convert_object(self, obj):
+        return to_r(obj)
 
     def module(self, name: str) -> RModule:
         return RModule(self, name)

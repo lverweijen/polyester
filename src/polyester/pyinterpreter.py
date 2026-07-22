@@ -5,12 +5,16 @@ from polyester.interpreter import RemoteObject, Interpreter, RemoteName
 from polyester.channels import JsonChannel
 
 class RemotePyObject(RemoteObject):
-    pass
+    def to_code(self):
+        return str(self.id)
 
 
 class RemotePyName(RemoteName):
     def __getattr__(self, item):
         return RemotePyName(self._interpreter, f"{self.name}.{item}")
+
+    def to_code(self):
+        return self.name
 
 
 class PyInterpreter(Interpreter):

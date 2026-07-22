@@ -1,11 +1,17 @@
 import abc
 import os
 import tempfile
+from abc import ABCMeta
 from json import JSONDecodeError
 from typing import Type, Any
 
 import narwhals as nw
 import pyarrow.ipc as ipc
+
+try:
+    from string.templatelib import Template, Interpolation
+except ImportError:
+    from tstr import Template, Interpolation
 
 ARROW_PROTOCOLS = [
     "__arrow_c_schema__",
@@ -29,8 +35,34 @@ class Interpreter(metaclass=abc.ABCMeta):
     def __setitem__(self, name: str, source: "Remote"):
         self.cmd("assign", target=name, source=source.to_dict())
 
-    def module(self, name: str) -> Any:
+    def module(self, name: str = None) -> Any:
         raise NotImplementedError("This interpreter doesn't support modules.")
+
+    def _convert_code(self, code: str | Template):
+        if not isinstance(code, Template):
+            return code
+
+        parts = []
+        for item in code:
+            match item:
+                case str() as s:
+                    parts.append(s)
+                case Interpolation(value, _, conversion, format_spec):
+                    if conversion:
+                        raise ValueError("Conversion not supported")
+                    if format_spec:
+                        raise ValueError("format_spec not supported")
+
+                    if isinstance(value, Remote):
+                        encoded = value.to_code()
+                    else:
+                        encoded = self.convert_object(value)
+
+                    parts.append(encoded)
+        return "".join(parts)
+
+    def convert_object(self, obj):
+        raise NotImplementedError("This interpreter doesn't support templated code.")
 
     @property
     def objects(self):
@@ -97,10 +129,12 @@ class Interpreter(metaclass=abc.ABCMeta):
             return {'value': obj}
 
     def eval(self, code: str) -> "RemoteObject":
+        code = self._convert_code(code)
         msg = self.cmd("eval", code=code)
         return self.remote_object(self, msg["id"])
 
     def exec(self, code: str) -> None:
+        code = self._convert_code(code)
         self.cmd("exec", code=code)
 
 
@@ -112,6 +146,10 @@ class Remote(metaclass=abc.ABCMeta):
     def to_dict(self):
         pass
 
+    @abc.abstractmethod
+    def to_code(self):
+        pass
+
     def get(self, df_backend=None):
         return self._interpreter.get(self, df_backend=df_backend)
 
@@ -119,7 +157,7 @@ class Remote(metaclass=abc.ABCMeta):
         return self._interpreter.call(self, *args, **kwargs)
 
 
-class RemoteObject(Remote):
+class RemoteObject(Remote, metaclass=ABCMeta):
     """Representation of remote Object."""
     def __init__(self, interpreter, id):
         self._interpreter = interpreter
@@ -135,7 +173,7 @@ class RemoteObject(Remote):
         self._interpreter.cmd("delete", id=self.id)
 
 
-class RemoteName(Remote):
+class RemoteName(Remote, metaclass=ABCMeta):
     """Representation of remote Name."""
     def __init__(self, interpreter: Interpreter, name: str, ns=None):
         self._interpreter = interpreter
@@ -146,7 +184,10 @@ class RemoteName(Remote):
         return f"{self.__class__.__name__}{self._interpreter, self.name}"
 
     def to_dict(self):
-        return {"name": self.name}
+        if not self.ns:
+            return {"name": self.name}
+        else:
+            return {"name": self.name, "ns": self.ns}
 
     def __getattr__(self, item) -> "RemoteName":
         raise NotImplementedError(f"Attributes are not implemented for {type(self._interpreter).__name__}")
