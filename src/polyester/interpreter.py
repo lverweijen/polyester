@@ -36,6 +36,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         self.cmd("assign", target=name, source=source.to_dict())
 
     def module(self, name: str = None) -> Any:
+        """Return namespace of installed module/package."""
         raise NotImplementedError("This interpreter doesn't support modules.")
 
     def _convert_code(self, code: str | Template):
@@ -61,14 +62,17 @@ class Interpreter(metaclass=abc.ABCMeta):
                     parts.append(encoded)
         return "".join(parts)
 
-    def convert_object(self, obj):
+    def convert_object(self, obj) -> str:
+        """Converts an object to include in an eval/exec string."""
         raise NotImplementedError("This interpreter doesn't support templated code.")
 
     @property
     def objects(self):
+        """Offers read/write access to objects (available in exec/eval).."""
         return self.module(None)
 
     def cmd(self, cmd: str, **kwargs) -> dict:
+        """Send a low-level message to interpreter (for internal use)."""
         self._channel.write({"cmd": cmd, **kwargs})
         msg = self._channel.read()
         status = msg["status"]
@@ -78,9 +82,10 @@ class Interpreter(metaclass=abc.ABCMeta):
             raise ValueError(f"{msg}")
 
     def insert(self, data: Any, target_type=None) -> "RemoteObject":
-        """Insert data.
+        """Send data from python into the interpreter.
 
-        This either writes the data to a temporary file or encodes it in the json.
+        The data needs to be either json or arrow-serializable.
+        It returns a reference to a remote-object.
         """
         if any(hasattr(data, protocol) for protocol in ARROW_PROTOCOLS):
             table = nw.from_native(data).to_arrow()
@@ -99,6 +104,10 @@ class Interpreter(metaclass=abc.ABCMeta):
         return self.remote_object(self, msg["id"])
 
     def get(self, obj: "Remote", df_backend=None) -> Any:
+        """Obtain a remote object as python-equivalent.
+
+        If the remote object is a dataframe, a backend (polars, pandas) can be specified.
+        """
         msg = self.cmd("get", **obj.to_dict())
         try:
             value = msg["value"]
@@ -115,6 +124,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         return value
 
     def call(self, function: "Remote", /, *args, **kwargs) -> "RemoteObject":
+        """Call a remote function."""
         packed_function = function.to_dict()
         packed_args = list(map(self._prepare_arg, args))
         packed_kwargs = {k: self._prepare_arg(v) for k, v in kwargs.items()}
@@ -128,12 +138,20 @@ class Interpreter(metaclass=abc.ABCMeta):
         else:
             return {'value': obj}
 
-    def eval(self, code: str) -> "RemoteObject":
+    def eval(self, code: str | Template) -> "RemoteObject":
+        """Execute code and return a remote object.
+
+        If code is a t-string, remote objects and simple json-values can be interpolated.
+        """
         code = self._convert_code(code)
         msg = self.cmd("eval", code=code)
         return self.remote_object(self, msg["id"])
 
     def exec(self, code: str) -> None:
+        """Execute code, but don't return anything.
+
+        If code is a t-string, remote objects and simple json-values can be interpolated.
+        """
         code = self._convert_code(code)
         self.cmd("exec", code=code)
 
@@ -151,9 +169,11 @@ class Remote(metaclass=abc.ABCMeta):
         pass
 
     def get(self, df_backend=None):
+        """Same as interpreter.get(self)."""
         return self._interpreter.get(self, df_backend=df_backend)
 
     def __call__(self, *args, **kwargs):
+        """If remote points to a function, call the function with given arguments."""
         return self._interpreter.call(self, *args, **kwargs)
 
 

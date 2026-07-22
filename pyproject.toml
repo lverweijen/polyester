@@ -1,12 +1,13 @@
 [project]
 name = "polyester"
-version = "0.1.2"
+version = "0.2.0"
 description = "Run R interpreter from python"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "narwhals>=2.16.0",
     "pyarrow>=23.0.1",
+    "tstr; python_version < '3.14'"
 ]
 license = "Apache-2.0"
 

@@ -5,6 +5,10 @@ from polyester.interpreter import Remote
 
 
 def to_r(obj: Any) -> str:
+    """Convert an object to R.
+
+    Mostly to be used for interpolation.
+    """
     match obj:
         case Remote():
             return obj.to_code()

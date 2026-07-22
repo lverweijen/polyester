@@ -9,26 +9,24 @@ The goal is simplicity and reliability — especially on Windows — while keepi
 ## Quick Example
 
 ```python
-from polyester import get_interpreter
+from polyester import RInterpreter
 
 # Start an R interpreter
-rr = get_interpreter(
-    "R",
-    path=r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe"
-)
+R = RInterpreter(path=r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
 
 # Access an R module (namespace)
-rbase = rr.module("base")
+rbase = R.module("base")
 
 # Simple calculations
-x = rr.eval("sin(100)")
+x = R.eval("sin(100)")
 y = rbase.cos(100)
 
-print(x.get(), y.get())
+# Get results in python
+print(R.get(x), R.get(y))
 
 # Bring a dataframe from R to Python
-iris_r = rr.eval("iris")      # RemoteObject
-iris_df = iris_r.get("pandas")
+iris_rdf = R.eval("iris")            # RemoteObject
+iris_df = R.get(iris_rdf, "pandas")  # Python/pandas object
 print(iris_df.head())
 ```
 
@@ -51,15 +49,15 @@ An interpreter manages:
 
 An interpreter supports the following operations:
 
-| Operation          | Parameters                          | Returns             | Description                      |
-| ------------------ | ----------------------------------- | ------------------- | -------------------------------- |
-| `insert`           | `x: simple/dataframe`               | `RemoteObject`      | Send Python data to R            |
-| `get`              | `x: Remote`                         | `simple/dataframe`  | Retrieve data from R             |
-| `rr[name]`         | `name: str`                         | `RemoteName` (lazy) | Reference a remote symbol        |
-| `rr[name] = value` | `name: str`, `value: simple/Remote` | –                   | Assign remotely                  |
-| `eval`             | `code: str`                         | `RemoteObject`      | Evaluate R code                  |
-| `exec`             | `code: str`                         | –                   | Execute R code (no return value) |
-| `call`             | `f: Remote`, `*args`, `**kwargs`    | `RemoteObject`      | Call a remote function           |
+| Operation                | Parameters                          | Returns             | Description                      |
+|--------------------------|-------------------------------------|---------------------|----------------------------------|
+| `insert`                 | `x: simple/dataframe`               | `RemoteObject`      | Send Python data to R            |
+| `get`                    | `x: Remote`                         | `simple/dataframe`  | Retrieve data from R             |
+| `R.objects.name`         | `name: str`                         | `RemoteName` (lazy) | Reference a remote symbol        |
+| `R.objects.name = value` | `name: str`, `value: simple/Remote` | –                   | Assign remotely                  |
+| `eval`                   | `code: str`                         | `RemoteObject`      | Evaluate R code                  |
+| `exec`                   | `code: str`                         | –                   | Execute R code (no return value) |
+| `call`                   | `f: Remote`, `*args`, `**kwargs`    | `RemoteObject`      | Call a remote function           |
 
 ### RemoteObject vs RemoteName
 
@@ -74,8 +72,8 @@ An interpreter supports the following operations:
 Example:
 
 ```python
-rr["x"] = 10
-result = rr["x"].get()   # 10
+R.objects.x = 10
+result = R.get(R.objects.x)   # 10
 ```
 
 ---
@@ -87,10 +85,10 @@ DataFrames are transferred using Apache Arrow files for efficiency.
 You can request a specific backend when retrieving:
 
 ```python
-df = iris_r.get("pandas")
+df = R.get(iris_rdf, "pandas")
 ```
 
-Future backends (e.g., polars) may be supported.
+If no `df_backend` is provided, polars will be used.
 
 ---
 

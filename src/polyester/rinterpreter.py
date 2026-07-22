@@ -54,11 +54,17 @@ class RModule:
 
 
 class RInterpreter(Interpreter):
+    """Remote R interpreter."""
     remote_object = RemoteRObject
     remote_name = RemoteRName
     worker_path = Path(__file__).parent / "workers/rworker.R"
 
     def __init__(self, interpreter_path):
+        """
+        Launch a remote R interpreter.
+
+        :param interpreter_path: Path to Rscript
+        """
         if interpreter_path is None:
             interpreter_path = "Rscript"
 
@@ -92,5 +98,4 @@ class RInterpreter(Interpreter):
         build.pop(-1)  # remove trailing comma
         build.append(")")
         code = "".join(build)
-        print(f"{code=}")
         return self.eval(code)
