@@ -32,6 +32,9 @@ class RemoteRName(RemoteName):
         else:
             return self.name
 
+    def __call__(self, *args, **kwargs):
+        return self._interpreter.dirtycall(self, *args, **kwargs)
+
 
 class RModule:
     def __init__(self, interpreter: Interpreter, ns: str = None):
@@ -72,3 +75,22 @@ class RInterpreter(Interpreter):
 
     def module(self, name: str) -> RModule:
         return RModule(self, name)
+
+    def dirtycall(self, function: "Remote", /, *args, **kwargs) -> "RemoteObject":
+        """Call function, but uses interpolation instead of protocol.
+
+        This seems to be a more flexible approach to call R functions.
+        """
+        build = [(function.to_code()), "("]
+        for arg in args:
+            build.append(to_r(arg))
+            build.append(",")
+        build.pop(-1)  # remove trailing comma
+        for k, v in kwargs.items():
+            build.append(f"{k} = {to_r(v)}")
+        build.append(",")
+        build.pop(-1)  # remove trailing comma
+        build.append(")")
+        code = "".join(build)
+        print(f"{code=}")
+        return self.eval(code)
