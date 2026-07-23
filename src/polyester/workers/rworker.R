@@ -132,14 +132,16 @@ handle_insert <- function(msg) {
 
   library(arrow)
 
-  # TODO Handle raw value
+  if (!is.null(msg$path)) {
+    result <- read_ipc_stream(msg$path)
+    id <- store_object(result)
 
-  result <- read_ipc_stream(msg$path)
-  id <- store_object(result)
-
-  # Clean up
-  if (file.exists(msg$path)) {
-    unlink(msg$path)
+    # Clean up
+    if (file.exists(msg$path)) {
+      unlink(msg$path)
+    }
+  } else {
+    id <- store_object(msg$value)
   }
 
   list(status="ok", id=id)

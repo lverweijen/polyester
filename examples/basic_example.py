@@ -18,6 +18,9 @@ def r_example():
     y2 = R.eval(t("cos({y1})"))
     print(f"{R.get(y1), R.get(y2)=}")
 
+    # Remote objects can be printed without getting them first
+    R.print(y2)
+
     # Bring a dataframe over from Rlang to python
     remote_df = R.eval("iris")
     df = R.get(remote_df, "pandas")

@@ -1,3 +1,8 @@
+# v0.2.1
+
+- Add `print` method to `interpreter`.
+- Make `R.insert` work on simple values (str, float, bool).
+
 # v0.2.0
 
 - Expose `PyInterpreter` and `RInterpreter` directly. The `get_interpreter`-frontend isn't really needed and might be removed later.
@@ -11,10 +16,13 @@
   If this approach turns out to work well, it might replace the `call`-function in a future version.
 
 # v0.1.2
+
 Fix assign-function
 
 # v0.1.1
+
 Actually include the R worker
 
 # v0.1.0
+
 Initial version

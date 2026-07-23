@@ -12,6 +12,8 @@ def main():
 
 def example1():
     # Evaluation in R-space
+    # Assigning to `R.objects.name` makes `name` global in R
+    # This is useful if you want to use it later in an R.eval
     R.objects.df = R.eval("lme4::sleepstudy")
 
     # Bringing data over to python-space
@@ -33,11 +35,13 @@ def example2_sugar():
     ])
 
     # Bring dataframe over to R-space
-    R.objects.df = R.insert(df)
+    rdf = R.insert(df)
 
     # Run a model on our df
-    R.objects.ft1 = lme4.lmer(RCode("Reaction ~ Days + (Days | Subject)"), R.objects.df)
-    R.exec("capture.output(ft1, file=stderr())")
+    ft1 = lme4.lmer(RCode("Reaction ~ Days + (Days | Subject)"), rdf)
+
+    # Print the result
+    R.print(ft1)
 
 
 if __name__ == '__main__':

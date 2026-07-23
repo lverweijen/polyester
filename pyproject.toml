@@ -1,6 +1,6 @@
 [project]
 name = "polyester"
-version = "0.2.0"
+version = "0.2.1"
 description = "Run R interpreter from python"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,3 +16,9 @@ license = "Apache-2.0"
 polyester = [
     "workers/*.R"
 ]
+
+[project.urls]
+Homepage = "https://github.com/lverweijen/polyester"
+Repository = "https://github.com/lverweijen/polyester"
+Issues = "https://github.com/lverweijen/polyester/issues"
+Changelog = "https://github.com/lverweijen/polyester/blob/main/CHANGELOG.md"

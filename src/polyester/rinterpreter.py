@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import overload
 
 from polyester.convert_r import to_r
 from polyester.interpreter import RemoteObject, Interpreter, RemoteName
@@ -75,6 +76,8 @@ class RInterpreter(Interpreter):
         if "::" in item:
             ns, name = item.split("::", maxsplit=1)
             return self.remote_name(name, ns=ns)
+        else:
+            return self.remote_name(item)
 
     def convert_object(self, obj):
         return to_r(obj)
@@ -99,3 +102,27 @@ class RInterpreter(Interpreter):
         build.append(")")
         code = "".join(build)
         return self.eval(code)
+
+    @overload
+    def print(self, x: "Remote", capture_output=False) -> None: ...
+    @overload
+    def print(self, x: "Remote", capture_output=True) -> str: ...
+    def print(self, x: "Remote", capture_output=False):
+        """Print the canonical representation of an object.
+
+        :param x: Object to print
+        :param capture_output: If true, output is returned instead of printed.
+        :return: Either output or nothing
+        """
+        remote_obj = self.eval(f"capture.output({to_r(x)})")
+        output = self.get(remote_obj)
+
+        # Output can be a str or list, because in R it's a character().
+        if isinstance(output, str):
+            output = [output]
+
+        if capture_output:
+            return "\n".join(output)
+        else:
+            for s in output:
+                print(s)
