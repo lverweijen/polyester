@@ -1,6 +1,6 @@
 [project]
 name = "polyester"
-version = "0.2.1"
+version = "0.2.2"
 description = "Run R interpreter from python"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -10,11 +10,31 @@ dependencies = [
     "tstr; python_version < '3.14'"
 ]
 license = "Apache-2.0"
-
+keywords = ["interoperability", "R", "statistics", "remote-interpreter"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
 # Here all workers will need to be included
 [tool.setuptools.package-data]
 polyester = [
     "workers/*.R"
+]
+
+[tool.pytest]
+pythonpath = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
 ]
 
 [project.urls]

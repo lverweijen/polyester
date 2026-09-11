@@ -1,3 +1,10 @@
+# v0.2.2
+
+- Allow passing pathlikes like `pathlib.Path` to R (becomes string).
+- Support passing datetime-objects to functions.
+- Improve handling of numeric scalars (inf/nan/complex).
+- Errors now raise `InterpreterError` instead of `ValueError`.
+
 # v0.2.1
 
 - Add `print` method to `interpreter`.

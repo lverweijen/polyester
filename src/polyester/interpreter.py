@@ -79,7 +79,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         if status == "ok":
             return msg
         else:
-            raise ValueError(f"{msg}")
+            raise InterpreterError(f"{msg}")
 
     def insert(self, data: Any, target_type=None) -> "RemoteObject":
         """Send data from python into the interpreter.
@@ -211,3 +211,7 @@ class RemoteName(Remote, metaclass=ABCMeta):
 
     def __getattr__(self, item) -> "RemoteName":
         raise NotImplementedError(f"Attributes are not implemented for {type(self._interpreter).__name__}")
+
+
+class InterpreterError(Exception):
+    pass

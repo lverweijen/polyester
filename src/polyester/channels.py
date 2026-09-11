@@ -24,4 +24,19 @@ class JsonChannel:
         try:
             return json.loads(l)
         except JSONDecodeError:
-            raise Exception(f"Invalid message ({l}). Perhaps print to stderr, not stdout.")
+            # Maybe call self.recover() here, but if that fails, we never see the error message.
+            raise ChannelError(f"Invalid message ({l}). Perhaps print to stderr, not stdout.")
+
+    def recover(self):
+        """Try to recover from a bad position.
+
+        If recovery fails, the interpreter will probably hang.
+        """
+
+        # It would be nice it there were some kind of non-blocking version of this.
+        while "status" not in json.loads(self._remote.stdout.readline()):
+            pass
+
+
+class ChannelError(Exception):
+    pass
