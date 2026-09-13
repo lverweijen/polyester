@@ -4,11 +4,16 @@ R = RInterpreter(r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
 
 
 def tidyr_example():
-    rtidyr = R.module("tidyr")
+    tidyr = R.module("tidyr")
 
     rdf = R.eval("data.frame(a=c(1,2,3), b=c(4,5,6))")
-    longer_rdf = rtidyr.pivot_longer(rdf, cols=['a', 'b'])
-    longer_df = R.get(longer_rdf)
-    print(longer_df)
+
+    # In R: tidyr::pivot_longer(rdf, cols=c("a", "b"))
+    longer_rdf = tidyr.pivot_longer(rdf, cols=['a', 'b'])
+    R.print(longer_rdf)
+
+    # In R: rdf |> tidyr::pivot_longer(cols=c("a", "b"))
+    longer_rdf2 = rdf.pipe(tidyr.pivot_longer, cols=['a', 'b'])
+    R.print(longer_rdf2)
 
 tidyr_example()

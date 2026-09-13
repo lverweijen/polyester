@@ -1,28 +1,44 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import overload
 
-from polyester.convert_r import to_r
-from polyester.interpreter import RemoteObject, Interpreter, RemoteName
 from polyester.channels import JsonChannel
+from polyester.convert_r import to_r, RCode
+from polyester.interpreter import RemoteObject, Interpreter, RemoteName, Remote
 
 
-class RemoteRObject(RemoteObject):
+class RemoteR(Remote):
+    _interpreter: RInterpreter
+
+    def __call__(self, *args, **kwargs) -> RemoteRObject:
+        return self._interpreter.dirtycall(self, *args, **kwargs)
+
+    def pipe(self, f: RemoteR | RCode, *args, **kwargs) -> RemoteRObject:
+        return self._interpreter.dirtycall(f, self, *args, **kwargs)
+
+
+
+class RemoteRObject(RemoteObject, RemoteR):
     def to_code(self):
         return f"`{self.id}`"
 
 
-class RemoteRName(RemoteName):
+class RemoteRName(RemoteName, RemoteR):
     def __getattr__(self, item):
         raise NotImplementedError("Ambiguous attribute. Use `obj.dcolon/dollar/at(name)` instead.")
 
+    # DEPRECATED
     def dcolon(self, name):
         """Insert double colon in name."""
         return RemoteRName(interpreter=self._interpreter, name=f"{self.name}::{name}")
 
+    # DEPRECATED
     def dollar(self, name):
         """Insert dollar in name."""
         return RemoteRName(interpreter=self._interpreter, name=f"{self.name}${name}")
 
+    # DEPRECATED
     def at(self, name):
         """Access S4 slot."""
         return RemoteRName(interpreter=self._interpreter, name=f"{self.name}@{name}")
@@ -32,9 +48,6 @@ class RemoteRName(RemoteName):
             return f"{self.ns}::{self.name}"
         else:
             return self.name
-
-    def __call__(self, *args, **kwargs):
-        return self._interpreter.dirtycall(self, *args, **kwargs)
 
 
 class RModule:
@@ -85,19 +98,18 @@ class RInterpreter(Interpreter):
     def module(self, name: str) -> RModule:
         return RModule(self, name)
 
-    def dirtycall(self, function: "Remote", /, *args, **kwargs) -> "RemoteObject":
+    def dirtycall(self, function: RemoteR, /, *args, **kwargs) -> RemoteObject:
         """Call function, but uses interpolation instead of protocol.
 
         This seems to be a more flexible approach to call R functions.
         """
-        build = [(function.to_code()), "("]
+        build = [to_r(function), "("]
         for arg in args:
             build.append(to_r(arg))
             build.append(",")
-        build.pop(-1)  # remove trailing comma
         for k, v in kwargs.items():
             build.append(f"{k} = {to_r(v)}")
-        build.append(",")
+            build.append(",")
         build.pop(-1)  # remove trailing comma
         build.append(")")
         code = "".join(build)

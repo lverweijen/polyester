@@ -15,19 +15,21 @@ from polyester import RInterpreter
 R = RInterpreter(path=r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
 
 # Access an R module (namespace)
-rbase = R.module("base")
+base_r = R.module("base")
 
-# Simple calculations
+# Simple calculations (both return a RemoteRObject)
 x = R.eval("sin(100)")
-y = rbase.cos(100)
+y = base_r.cos(100)
 
 # Get results in python
-print(R.get(x), R.get(y))
+print(x.fetch(), y.fetch())
 
-# Bring a dataframe from R to Python
-iris_rdf = R.eval("iris")            # RemoteObject
-iris_df = R.get(iris_rdf, "pandas")  # Python/pandas object
+# Bring a dataframe from R to Python (pd.DataFrame)
+iris_df = R.eval("iris").fetch('pandas')
 print(iris_df.head())
+
+# Print head without first fetching to python
+R.print(R.eval("head(iris)"))
 ```
 
 ---
@@ -74,6 +76,9 @@ Example:
 ```python
 R.objects.x = 10
 result = R.get(R.objects.x)   # 10
+
+# This can also be written the following way
+result = R.objects.x.fetch()   # 10
 ```
 
 ---
@@ -85,10 +90,10 @@ DataFrames are transferred using Apache Arrow files for efficiency.
 You can request a specific backend when retrieving:
 
 ```python
-df = R.get(iris_rdf, "pandas")
+df = iris_rdf.fetch("pandas")
 ```
 
-If no `df_backend` is provided, polars will be used.
+If no `df_backend` is provided, [polars](https://pola.rs/) will be used.
 
 ---
 
@@ -106,6 +111,8 @@ message("debug info")
 ```
 
 or write to `stderr()`.
+
+In python, `R.print` can be used to print a remote object.
 
 ---
 

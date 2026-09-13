@@ -4,6 +4,8 @@
 - Support passing datetime-objects to functions.
 - Improve handling of numeric scalars (inf/nan/complex).
 - Errors now raise `InterpreterError` instead of `ValueError`.
+- Add `remote_object.fetch()` as an alias to `R.get(remote_object)`.
+- Add `pipe` method to `RemoteR` to make chaining easier.
 
 # v0.2.1
 

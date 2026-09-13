@@ -171,6 +171,9 @@ class Remote(metaclass=abc.ABCMeta):
     def get(self, df_backend=None):
         """Same as interpreter.get(self)."""
         return self._interpreter.get(self, df_backend=df_backend)
+    
+    # This is alias for compatibility with rpy2
+    fetch = get
 
     def __call__(self, *args, **kwargs):
         """If remote points to a function, call the function with given arguments."""

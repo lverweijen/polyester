@@ -17,7 +17,7 @@ def example1():
     R.objects.df = R.eval("lme4::sleepstudy")
 
     # Bringing data over to python-space
-    print(R.get(R.objects.df))
+    print(R.objects.df.fetch())
 
 
 def example2_sugar():
