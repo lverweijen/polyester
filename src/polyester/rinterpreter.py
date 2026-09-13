@@ -5,6 +5,7 @@ from typing import overload
 
 from polyester.channels import JsonChannel
 from polyester.convert_r import to_r, RCode
+from polyester._rhelpers import find_rscript
 from polyester.interpreter import RemoteObject, Interpreter, RemoteName, Remote
 
 
@@ -73,16 +74,22 @@ class RInterpreter(Interpreter):
     remote_name = RemoteRName
     worker_path = Path(__file__).parent / "workers/rworker.R"
 
-    def __init__(self, interpreter_path):
+    def __init__(self, program_path=None):
         """
         Launch a remote R interpreter.
 
-        :param interpreter_path: Path to Rscript
+        :param program_path: Path to Rscript
         """
-        if interpreter_path is None:
-            interpreter_path = "Rscript"
+        if program_path is None:
+            program_path = find_rscript()
 
-        channel = JsonChannel([interpreter_path, "--vanilla", self.worker_path])
+        if program_path is None:
+            raise RuntimeError(
+                "Could not find Rscript. "
+                "Please install R or specify program_path explicitly."
+            )
+
+        channel = JsonChannel([program_path, "--vanilla", self.worker_path])
         super().__init__(channel)
 
     def __getitem__(self, item):

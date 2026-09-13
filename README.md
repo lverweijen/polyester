@@ -12,7 +12,7 @@ The goal is simplicity and reliability — especially on Windows — while keepi
 from polyester import RInterpreter
 
 # Start an R interpreter
-R = RInterpreter(path=r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
+R = RInterpreter()
 
 # Access an R module (namespace)
 base_r = R.module("base")

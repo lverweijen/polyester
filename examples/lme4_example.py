@@ -3,7 +3,7 @@ import pandas as pd
 from polyester import RInterpreter
 from polyester.convert_r import RCode
 
-R = RInterpreter(r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
+R = RInterpreter()
 
 def main():
     example1()

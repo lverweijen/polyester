@@ -3,7 +3,7 @@ from tstr import t
 
 from polyester import RInterpreter, PyInterpreter
 
-R = RInterpreter(r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
+R = RInterpreter()
 PY = PyInterpreter()
 
 

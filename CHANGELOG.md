@@ -1,3 +1,8 @@
+# v0.2.3
+
+Improve logic to automatically locate RScript.
+Most of the time, you can now write `R = RInterpreter()` without specifying an explicit location.
+
 # v0.2.2
 
 - Allow passing pathlikes like `pathlib.Path` to R (becomes string).
