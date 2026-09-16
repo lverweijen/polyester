@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import overload
 
 from polyester.channels import JsonChannel
-from polyester.convert_r import to_r, RCode
+from polyester.convert_r import to_r, RCode, convert_r
 from polyester._rhelpers import find_rscript
 from polyester.interpreter import RemoteObject, Interpreter, RemoteName, Remote
 
@@ -100,7 +100,7 @@ class RInterpreter(Interpreter):
             return self.remote_name(item)
 
     def convert_object(self, obj):
-        return to_r(obj)
+        return convert_r(obj)
 
     def module(self, name: str) -> RModule:
         return RModule(self, name)

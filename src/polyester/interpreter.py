@@ -40,29 +40,18 @@ class Interpreter(metaclass=abc.ABCMeta):
         raise NotImplementedError("This interpreter doesn't support modules.")
 
     def _convert_code(self, code: str | Template):
-        if not isinstance(code, Template):
+        if isinstance(code, str):
             return code
+        else:
+            parts = []
+            for item in code:
+                if isinstance(item, str):
+                    parts.append(item)
+                else:
+                    parts.append(self.convert_object(item))
+            return "".join(parts)
 
-        parts = []
-        for item in code:
-            match item:
-                case str() as s:
-                    parts.append(s)
-                case Interpolation(value, _, conversion, format_spec):
-                    if conversion:
-                        raise ValueError("Conversion not supported")
-                    if format_spec:
-                        raise ValueError("format_spec not supported")
-
-                    if isinstance(value, Remote):
-                        encoded = value.to_code()
-                    else:
-                        encoded = self.convert_object(value)
-
-                    parts.append(encoded)
-        return "".join(parts)
-
-    def convert_object(self, obj) -> str:
+    def convert_object(self, Interpolation) -> str:
         """Converts an object to include in an eval/exec string."""
         raise NotImplementedError("This interpreter doesn't support templated code.")
 

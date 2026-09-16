@@ -2,13 +2,13 @@
 
 import datetime as dt
 import os
-from pathlib import Path
+from pathlib import PureWindowsPath, PurePosixPath
 from zoneinfo import ZoneInfo
 
 import pytest
+from tstr import Interpolation, t
 
-from polyester.convert_r import to_r
-
+from polyester.convert_r import to_r, convert_r, RCode
 
 
 @pytest.mark.parametrize(
@@ -28,6 +28,8 @@ from polyester.convert_r import to_r
         (0.0, "0.0"),
         (3.14, "3.14"),
         (-2.5, "-2.5"),
+
+        (None, "NULL"),
 
         (complex(0, 0), "complex(real=0.0, imaginary=0.0)"),
         (complex(1, 0), "complex(real=1.0, imaginary=0.0)"),
@@ -50,8 +52,10 @@ from polyester.convert_r import to_r
                 "complex(real=Inf, imaginary=-Inf)",
         ),
 
-        (Path("data/file.csv"), '"data/file.csv"'),
-        (os.fspath(Path("data/file.csv")), '"data\\\\file.csv"'),
+        (PurePosixPath("data/file.csv"), '"data/file.csv"'),
+        (PureWindowsPath("data/file.csv"), r'"data\\file.csv"'),
+        (os.fspath(PurePosixPath("data/file.csv")), '"data/file.csv"'),
+        (os.fspath(PureWindowsPath("data/file.csv")), r'"data\\file.csv"'),
 
         (["a", "b"], 'c("a", "b")'),
         ((1, 2, 3), "c(1L, 2L, 3L)"),
@@ -69,7 +73,6 @@ def test_general_types(value, expected):
 def test_bool_is_not_rendered_as_integer():
     assert to_r(True) == "TRUE"
     assert to_r(False) == "FALSE"
-
 
 
 @pytest.mark.parametrize(
@@ -250,3 +253,31 @@ def test_unsupported_or_nonfinite_values_are_rejected(value):
 )
 def test_special_float_values(value, expected):
     assert to_r(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (Interpolation(value="salon", expression=""), '"salon"'),
+        (Interpolation(value="salon", expression="", conversion="s"), "salon"),
+        (Interpolation(value="salon", expression="", conversion="r"), "'salon'"),
+        (Interpolation(value="salon", expression="", conversion="a"), "'salon'"),
+    ],
+)
+def test_interpolations(value, expected):
+    assert convert_r(value) == expected
+
+
+_varname = "value"
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (RCode(t("var = value")), "var = value"),
+        (RCode(t("var = {_varname}")), "var = \"value\""),
+        (RCode(t("var = {_varname!s}")), "var = value"),
+        (RCode(t("var = {_varname!r}")), "var = 'value'"),
+        (RCode(t("var = {_varname!a}")), "var = 'value'"),
+    ],
+)
+def test_rcode(value, expected):
+    assert value.to_code() == expected

@@ -3,7 +3,12 @@ import json
 import math
 import os
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Self
+
+try:
+    from string.templatelib import Interpolation, Template, convert
+except ImportError:
+    from tstr import Interpolation, Template, convert
 
 from polyester.interpreter import Remote
 
@@ -14,10 +19,8 @@ def to_r(obj: Any) -> str:
     Mostly to be used for interpolation.
     """
     match obj:
-        case Remote():
+        case Remote() | RCode():
             return obj.to_code()
-        case RCode():
-            return str(obj)
         case bool():
             return str(obj).upper()
         case int():
@@ -33,8 +36,10 @@ def to_r(obj: Any) -> str:
             return f"complex(real={to_r(obj.real)}, imaginary={to_r(obj.imag)})"
         case str() | float():
             return json.dumps(obj)
+        case None:
+            return "NULL"
         case os.PathLike():
-            return json.dumps(os.fspath(obj).replace("\\", "/"))
+            return json.dumps(os.fspath(obj))
         case Mapping():
             out = ["list("]
             for k, v in obj.items():
@@ -108,10 +113,48 @@ def to_r(obj: Any) -> str:
                 f"explicitly converted using R.insert(df).")
 
 
+def convert_r(intp: Interpolation) -> str:
+    """Convert interpolated R code to string.
+
+    If no conversion flag is present, to_r(value) is returned.
+    Otherwise, the converted value is returned literally.
+
+    For example:
+        value = "myvalue"
+        t"{value}" -> '"myvalue"'  # to_r(value)
+        t"{value!s}" -> "myvalue"  # literal
+    """
+    if intp.conversion:
+        return convert(intp.value, intp.conversion)
+    elif intp.format_spec:
+        raise ValueError("format_spec not supported")
+    else:
+        return to_r(intp.value)
+
+
 class RCode:
     """This stores R code and is inserted as is."""
-    def __init__(self, code):
-        self._code = code
+    __slots__ = "_code"
+
+    def __init__(self, code: str | Template | Self):
+        if isinstance(code, str):
+            self._code = code
+        elif hasattr(code, "to_code"):  # handle self
+            self._code = code.to_code()
+        else:
+            parts = []
+            for item in code:
+                if isinstance(item, str):
+                    parts.append(item)
+                else:
+                    parts.append(convert_r(item))
+            self._code = "".join(parts)
+
+    def to_code(self) -> str:
+        return self._code
+
+    def __repr__(self) -> str:
+        return f"RCode({self._code!r})"
 
     def __str__(self):
         return self._code

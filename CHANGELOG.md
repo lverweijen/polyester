@@ -1,7 +1,14 @@
+# v0.2.4
+
+- An `RCode` object now accepts a template-string.
+- Conversion flags can now be used in t-strings to insert literal R code.
+  For instance, `t"{varname!s}"` inserts the contents of `varname` without escaping.
+  Without conversion flag, the value is escaped as usual.
+
 # v0.2.3
 
-Improve logic to automatically locate RScript.
-Most of the time, you can now write `R = RInterpreter()` without specifying an explicit location.
+- Improve logic to automatically locate RScript.
+  Most of the time, you can now write `R = RInterpreter()` without specifying an explicit location.
 
 # v0.2.2
 
