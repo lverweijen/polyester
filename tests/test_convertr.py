@@ -255,28 +255,16 @@ def test_special_float_values(value, expected):
     assert to_r(value) == expected
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [
-        (Interpolation(value="salon", expression=""), '"salon"'),
-        (Interpolation(value="salon", expression="", conversion="s"), "salon"),
-        (Interpolation(value="salon", expression="", conversion="r"), "'salon'"),
-        (Interpolation(value="salon", expression="", conversion="a"), "'salon'"),
-    ],
-)
-def test_interpolations(value, expected):
-    assert convert_r(value) == expected
-
-
 _varname = "value"
+_varvalue = 42
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
         (RCode(t("var = value")), "var = value"),
-        (RCode(t("var = {_varname}")), "var = \"value\""),
-        (RCode(t("var = {_varname!s}")), "var = value"),
-        (RCode(t("var = {_varname!r}")), "var = 'value'"),
-        (RCode(t("var = {_varname!a}")), "var = 'value'"),
+        (RCode(t("{_varname} = {_varvalue}")), "\"value\" = 42L"),
+        (RCode(t("{_varname!s} = {_varvalue!s}")), "value = 42"),
+        (RCode(t("{_varname!r} = {_varvalue!r}")), "'value' = 42"),
+        (RCode(t("{_varname!a} = {_varvalue!a}")), "'value' = 42"),
     ],
 )
 def test_rcode(value, expected):

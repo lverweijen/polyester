@@ -56,16 +56,44 @@ class RModule:
         self._ns = ns
         self._interpreter = interpreter
 
-    def __getattr__(self, item) -> RemoteName:
-        ip = self._interpreter
-        return ip.remote_name(ip, item, ns=self._ns)
+    def __getattr__(self, item: str) -> RemoteRName:
+        """Get a name from remote module.
 
-    def __setattr__(self, key, value):
+        :param item: The name in R (where "__" gets replaced by ".").
+        :return: Remote name
+        """
+        return self.__getitem__(item.replace("__", "."))
+
+    def __setattr__(self, key: str, value):
+        """Set a name in a remote module.
+
+        :param key: The name in R (where "__" gets replaced by ".").
+        :param value: The value in R. Use R.insert(value) for more objects.
+        :return: None
+        """
         if key.startswith("_"):
             object.__setattr__(self, key, value)
         else:
-            ip = self._interpreter
-            ip.cmd("assign", target=key, ns=self._ns, source=value.to_dict())
+            self.__setitem__(key.replace("__", "."), value)
+
+    def __getitem__(self, item) -> RemoteRName:
+        """Get a name from remote module.
+
+        :param item: The name in R.
+        :return: Remote name
+        """
+        ip = self._interpreter
+        return ip.remote_name(ip, item, ns=self._ns)
+
+    def __setitem__(self, key, value):
+        """Set a name in a remote module.
+
+        :param key: The name in R.
+        :param value: The value in R. Use R.insert(value) for more objects.
+        :return: None
+        """
+        ip = self._interpreter
+        ip.cmd("assign", target=key, ns=self._ns, source=value.to_dict())
 
 
 class RInterpreter(Interpreter):

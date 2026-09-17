@@ -56,9 +56,15 @@ class Interpreter(metaclass=abc.ABCMeta):
         raise NotImplementedError("This interpreter doesn't support templated code.")
 
     @property
-    def objects(self):
+    def env(self):
         """Offers read/write access to objects (available in exec/eval).."""
         return self.module(None)
+
+    # DEPRECATED
+    @property
+    def objects(self):
+        """Offers read/write access to objects (available in exec/eval).."""
+        return self.env
 
     def cmd(self, cmd: str, **kwargs) -> dict:
         """Send a low-level message to interpreter (for internal use)."""

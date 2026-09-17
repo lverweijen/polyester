@@ -1,9 +1,12 @@
 # v0.2.4
 
-- An `RCode` object now accepts a template-string.
+- An `RCode` object now accepts template-strings.
 - Conversion flags can now be used in t-strings to insert literal R code.
   For instance, `t"{varname!s}"` inserts the contents of `varname` without escaping.
   Without conversion flag, the value is escaped as usual.
+- Use `R.env` as alias for `R.objects` to find names in R's global environment.
+- Simplify R names containing a `.` by writing something like `R.env.data__frame` (which is translated to `data.frame` in R).
+- Use indexing for more complex names, for example `R.env["+"]`, gets R's `+` function.
 
 # v0.2.3
 

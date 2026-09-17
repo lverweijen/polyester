@@ -51,15 +51,17 @@ An interpreter manages:
 
 An interpreter supports the following operations:
 
-| Operation                | Parameters                          | Returns             | Description                      |
-|--------------------------|-------------------------------------|---------------------|----------------------------------|
-| `insert`                 | `x: simple/dataframe`               | `RemoteObject`      | Send Python data to R            |
-| `get`                    | `x: Remote`                         | `simple/dataframe`  | Retrieve data from R             |
-| `R.objects.name`         | `name: str`                         | `RemoteName` (lazy) | Reference a remote symbol        |
-| `R.objects.name = value` | `name: str`, `value: simple/Remote` | –                   | Assign remotely                  |
-| `eval`                   | `code: str`                         | `RemoteObject`      | Evaluate R code                  |
-| `exec`                   | `code: str`                         | –                   | Execute R code (no return value) |
-| `call`                   | `f: Remote`, `*args`, `**kwargs`    | `RemoteObject`      | Call a remote function           |
+| Operation                                     | Parameters                          | Returns             | Description                             |
+|-----------------------------------------------|-------------------------------------|---------------------|-----------------------------------------|
+| `insert`                                      | `x: simple/dataframe`               | `RemoteObject`      | Send Python data to R                   |
+| `get`                                         | `x: Remote`                         | `simple/dataframe`  | Retrieve data from R                    |
+| `R.env.name` or `R.env[name]`                 | `name: str`                         | `RemoteName` (lazy) | Reference a remote symbol               |
+| `R.env.name = value` or `R.env[name] = value` | `name: str`, `value: simple/Remote` | –                   | Assign remotely                         |
+| `eval`                                        | `code: str`                         | `RemoteObject`      | Evaluate R code                         |
+| `exec`                                        | `code: str`                         | –                   | Execute R code (no return value)        |
+| `call`                                        | `f: Remote`, `*args`, `**kwargs`    | `RemoteObject`      | Call a remote function                  |
+| `module`                                      | `x: str`                            | `RemoteModule`      | Reference a remote namespace or package |
+
 
 ### RemoteObject vs RemoteName
 
@@ -78,7 +80,23 @@ R.objects.x = 10
 result = R.get(R.objects.x)   # 10
 
 # This can also be written the following way
-result = R.objects.x.fetch()   # 10
+result = R.env.x.fetch()   # 10
+```
+
+#### RemoteModule
+
+Modules help to construct a `RemoteName`.
+It doesn't matter if the names point to objects (can be fetched)
+or functions (can be called).
+
+```python
+base = R.module("math")
+
+# The __ is translated to a dot (calls base::data.frame)
+df = base.data__frame(year = [2010, 2020], population = [1_080_095, 1_120_015]) 
+
+# Functions in base (and other built-ins) can also be accessed through R.env directly
+df = R.env.data__frame(...)
 ```
 
 ---

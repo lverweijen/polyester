@@ -12,12 +12,12 @@ def main():
 
 def example1():
     # Evaluation in R-space
-    # Assigning to `R.objects.name` makes `name` global in R
+    # Assigning to `R.env.name` makes `name` global in R
     # This is useful if you want to use it later in an R.eval
-    R.objects.df = R.eval("lme4::sleepstudy")
+    R.env.df = R.eval("lme4::sleepstudy")
 
     # Bringing data over to python-space
-    print(R.objects.df.fetch())
+    print(R.env.df.fetch())
 
 
 def example2_sugar():
