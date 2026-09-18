@@ -57,13 +57,14 @@ An interpreter supports the following operations:
 | `get`                                         | `x: Remote`                         | `simple/dataframe`  | Retrieve data from R                    |
 | `R.env.name` or `R.env[name]`                 | `name: str`                         | `RemoteName` (lazy) | Reference a remote symbol               |
 | `R.env.name = value` or `R.env[name] = value` | `name: str`, `value: simple/Remote` | –                   | Assign remotely                         |
-| `eval`                                        | `code: str`                         | `RemoteObject`      | Evaluate R code                         |
-| `exec`                                        | `code: str`                         | –                   | Execute R code (no return value)        |
+| `eval`                                        | `code: str | Template`                         | `RemoteObject`      | Evaluate R code                         |
+| `exec`                                        | `code: str | Template`                         | –                   | Execute R code (no return value)        |
 | `call`                                        | `f: Remote`, `*args`, `**kwargs`    | `RemoteObject`      | Call a remote function                  |
 | `module`                                      | `x: str`                            | `RemoteModule`      | Reference a remote namespace or package |
+| `print`                                       | `x: str`                            | `RemoteModule`      | Prints a remote object                  |
 
 
-### RemoteObject vs RemoteName
+### Remote names and objects
 
 * **RemoteObject**
   A concrete object that exists in the remote R environment.
@@ -76,18 +77,24 @@ An interpreter supports the following operations:
 Example:
 
 ```python
-R.objects.x = 10
-result = R.get(R.objects.x)   # 10
+R.env.x = 10
+result = R.get(R.env.x)   # 10
 
 # This can also be written the following way
 result = R.env.x.fetch()   # 10
 ```
 
-#### RemoteModule
+The following methods can be used on both objects:
 
-Modules help to construct a `RemoteName`.
-It doesn't matter if the names point to objects (can be fetched)
-or functions (can be called).
+| Method    | Parameters         | Returns                  | Description             |
+|-----------|--------------------|--------------------------|-------------------------|
+| obj.fetch | -                  | Value (as python object) | Same as R.get(self)     |
+| obj.call  | *args, **kwargs    | RemoteObject             | Calls a remote function |
+| obj.pipe  | f, *args, **kwargs | RemoteObject             | Pipes object through f  |
+
+* **RemoteModule** A remote namespace to help construct `RemoteName`s.
+
+Example:
 
 ```python
 base = R.module("math")
@@ -97,6 +104,23 @@ df = base.data__frame(year = [2010, 2020], population = [1_080_095, 1_120_015])
 
 # Functions in base (and other built-ins) can also be accessed through R.env directly
 df = R.env.data__frame(...)
+```
+
+* **RCode** Pass literal R-code as an argument.
+Can be used to construct datatypes like formulae
+or function parameters that use Non Standard Evaluation.
+It can be called with a [t-string](https://docs.python.org/3/reference/lexical_analysis.html#t-strings) to interpolate python objects.
+
+Example:
+
+```python
+from polyester import RCode
+
+model = R.env.lm(RCode("y ~ a + b + c"), data=df)
+
+# t-string
+nice_temperature = 25
+subset_df = R.env.subset(df, RCode(t"Temp >= {nice_temperature}"))
 ```
 
 ---

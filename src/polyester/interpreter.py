@@ -8,10 +8,7 @@ from typing import Type, Any
 import narwhals as nw
 import pyarrow.ipc as ipc
 
-try:
-    from string.templatelib import Template, Interpolation
-except ImportError:
-    from tstr import Template, Interpolation
+from ._compat import TemplateLike, InterpolationLike
 
 ARROW_PROTOCOLS = [
     "__arrow_c_schema__",
@@ -39,7 +36,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         """Return namespace of installed module/package."""
         raise NotImplementedError("This interpreter doesn't support modules.")
 
-    def _convert_code(self, code: str | Template):
+    def _convert_code(self, code: str | TemplateLike):
         if isinstance(code, str):
             return code
         else:
@@ -51,7 +48,7 @@ class Interpreter(metaclass=abc.ABCMeta):
                     parts.append(self.convert_object(item))
             return "".join(parts)
 
-    def convert_object(self, Interpolation) -> str:
+    def convert_object(self, code: InterpolationLike) -> str:
         """Converts an object to include in an eval/exec string."""
         raise NotImplementedError("This interpreter doesn't support templated code.")
 
@@ -133,7 +130,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         else:
             return {'value': obj}
 
-    def eval(self, code: str | Template) -> "RemoteObject":
+    def eval(self, code: str | TemplateLike) -> "RemoteObject":
         """Execute code and return a remote object.
 
         If code is a t-string, remote objects and simple json-values can be interpolated.
@@ -142,7 +139,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         msg = self.cmd("eval", code=code)
         return self.remote_object(self, msg["id"])
 
-    def exec(self, code: str) -> None:
+    def exec(self, code: str | TemplateLike) -> None:
         """Execute code, but don't return anything.
 
         If code is a t-string, remote objects and simple json-values can be interpolated.

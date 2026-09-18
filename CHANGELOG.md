@@ -1,3 +1,7 @@
+# v0.2.5
+
+- Improve handling of t-string-backports through protocols.
+
 # v0.2.4
 
 - An `RCode` object now accepts template-strings.

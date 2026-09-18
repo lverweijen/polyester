@@ -5,12 +5,8 @@ import os
 from collections.abc import Mapping, Sequence
 from typing import Any, Self
 
-try:
-    from string.templatelib import Interpolation, Template, convert
-except ImportError:
-    from tstr import Interpolation, Template, convert
-
-from polyester.interpreter import Remote
+from ._compat import InterpolationLike, TemplateLike, convert
+from .interpreter import Remote
 
 
 def to_r(obj: Any) -> str:
@@ -113,7 +109,7 @@ def to_r(obj: Any) -> str:
                 f"explicitly converted using R.insert(df).")
 
 
-def convert_r(intp: Interpolation) -> str:
+def convert_r(intp: InterpolationLike) -> str:
     """Convert interpolated R code to string.
 
     If no conversion flag is present, to_r(value) is returned.
@@ -136,7 +132,7 @@ class RCode:
     """This stores R code and is inserted as is."""
     __slots__ = "_code"
 
-    def __init__(self, code: str | Template | Self):
+    def __init__(self, code: str | TemplateLike | Self):
         if isinstance(code, str):
             self._code = code
         elif hasattr(code, "to_code"):  # handle self
