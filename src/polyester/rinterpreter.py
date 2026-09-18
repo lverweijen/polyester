@@ -100,6 +100,8 @@ class RInterpreter(Interpreter):
     """Remote R interpreter."""
     remote_object = RemoteRObject
     remote_name = RemoteRName
+    remote_expression = RCode
+
     worker_path = Path(__file__).parent / "workers/rworker.R"
 
     def __init__(self, program_path=None):

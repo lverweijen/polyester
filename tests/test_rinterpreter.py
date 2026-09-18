@@ -1,10 +1,12 @@
 import pytest
+from tstr import t
 
 from polyester import RInterpreter
 from polyester.channels import ChannelError
 from polyester.interpreter import InterpreterError
 
-R = RInterpreter(r"C:\Program Files\R\R-4.5.2\bin\Rscript.exe")
+R = RInterpreter()
+
 
 def test_exec():
     R.exec("a <- c(1, 2, 3)")
@@ -39,3 +41,20 @@ def test_clutter_recover():
 def test_error():
     with pytest.raises(InterpreterError):
         R.eval("5 * undefined")
+
+
+_varname = "value"
+_varvalue = 42
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (R.expression("result ~ predictor1 + predictor2"), "result ~ predictor1 + predictor2"),
+        (R.expression(t("var = value")), "var = value"),
+        (R.expression(t("{_varname} = {_varvalue}")), "\"value\" = 42L"),
+        (R.expression(t("{_varname!s} = {_varvalue!s}")), "value = 42"),
+        (R.expression(t("{_varname!r} = {_varvalue!r}")), "'value' = 42"),
+        (R.expression(t("{_varname!a} = {_varvalue!a}")), "'value' = 42"),
+    ],
+)
+def test_expression_template(value, expected):
+    assert value.to_code() == expected

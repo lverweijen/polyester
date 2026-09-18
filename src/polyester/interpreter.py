@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import os
 import tempfile
@@ -19,8 +21,9 @@ ARROW_PROTOCOLS = [
 
 class Interpreter(metaclass=abc.ABCMeta):
     """Representation of remote interpreter."""
-    remote_object: Type["RemoteObject"]
-    remote_name: Type["RemoteName"]
+    remote_object: Type[RemoteObject]
+    remote_name: Type[RemoteName]
+    remote_expression: Type[RemoteExpression]
 
     def __init__(self, channel, df_backend='polars'):
         self._channel = channel
@@ -73,7 +76,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         else:
             raise InterpreterError(f"{msg}")
 
-    def insert(self, data: Any, target_type=None) -> "RemoteObject":
+    def insert(self, data: Any, target_type=None) -> RemoteObject:
         """Send data from python into the interpreter.
 
         The data needs to be either json or arrow-serializable.
@@ -115,7 +118,7 @@ class Interpreter(metaclass=abc.ABCMeta):
 
         return value
 
-    def call(self, function: "Remote", /, *args, **kwargs) -> "RemoteObject":
+    def call(self, function: "Remote", /, *args, **kwargs) -> RemoteObject:
         """Call a remote function."""
         packed_function = function.to_dict()
         packed_args = list(map(self._prepare_arg, args))
@@ -130,7 +133,7 @@ class Interpreter(metaclass=abc.ABCMeta):
         else:
             return {'value': obj}
 
-    def eval(self, code: str | TemplateLike) -> "RemoteObject":
+    def eval(self, code: str | TemplateLike) -> RemoteObject:
         """Execute code and return a remote object.
 
         If code is a t-string, remote objects and simple json-values can be interpolated.
@@ -146,6 +149,14 @@ class Interpreter(metaclass=abc.ABCMeta):
         """
         code = self._convert_code(code)
         self.cmd("exec", code=code)
+
+    def expression(self, code: str | RemoteExpression | TemplateLike) -> RemoteExpression:
+        if isinstance(code, RemoteExpression):
+            code = code.to_code()
+        else:
+            code = self._convert_code(code)
+
+        return type(self).remote_expression(code)
 
 
 class Remote(metaclass=abc.ABCMeta):
@@ -206,6 +217,20 @@ class RemoteName(Remote, metaclass=ABCMeta):
 
     def __getattr__(self, item) -> "RemoteName":
         raise NotImplementedError(f"Attributes are not implemented for {type(self._interpreter).__name__}")
+
+
+class RemoteExpression:
+    def __init__(self, code: str):
+        self._code = code
+
+    def to_code(self) -> str:
+        return self._code
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._code!r})"
+
+    def __str__(self):
+        return self._code
 
 
 class InterpreterError(Exception):

@@ -13,9 +13,12 @@ except ImportError:
 
 
 class InterpolationLike(Protocol):
-    value: Any
-    format_spec: str
-    conversion: Literal["a", "r", "s"] | None
+    @property
+    def value(self) -> Any: ...
+    @property
+    def format_spec(self) -> str: ...
+    @property
+    def conversion(self) -> Literal["a", "r", "s"] | None: ...
 
 
 class TemplateLike(Protocol, Iterable[str | InterpolationLike]):

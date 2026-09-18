@@ -38,7 +38,7 @@ def example2_sugar():
     rdf = R.insert(df)
 
     # Run a model on our df
-    ft1 = lme4.lmer(RCode("Reaction ~ Days + (Days | Subject)"), rdf)
+    ft1 = lme4.lmer(R.expression("Reaction ~ Days + (Days | Subject)"), rdf)
 
     # Print the result
     R.print(ft1)

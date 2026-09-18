@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Self
 
 from ._compat import InterpolationLike, TemplateLike, convert
-from .interpreter import Remote
+from .interpreter import Remote, RemoteExpression
 
 
 def to_r(obj: Any) -> str:
@@ -15,7 +15,7 @@ def to_r(obj: Any) -> str:
     Mostly to be used for interpolation.
     """
     match obj:
-        case Remote() | RCode():
+        case Remote() | RemoteExpression():
             return obj.to_code()
         case bool():
             return str(obj).upper()
@@ -128,10 +128,11 @@ def convert_r(intp: InterpolationLike) -> str:
         return to_r(intp.value)
 
 
-class RCode:
+class RCode(RemoteExpression):
     """This stores R code and is inserted as is."""
     __slots__ = "_code"
 
+    # Direct use deprecated in favour of using R.expression directly
     def __init__(self, code: str | TemplateLike | Self):
         if isinstance(code, str):
             self._code = code

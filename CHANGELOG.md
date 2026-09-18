@@ -1,3 +1,8 @@
+# v0.2.6
+
+- Add `R.expression(x)` as a more intuitive way to create remote expressions.
+  Using `RCode` directly still works for now.
+
 # v0.2.5
 
 - Improve handling of t-string-backports through protocols.

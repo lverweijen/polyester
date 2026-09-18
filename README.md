@@ -14,18 +14,15 @@ from polyester import RInterpreter
 # Start an R interpreter
 R = RInterpreter()
 
-# Access an R module (namespace)
-base_r = R.module("base")
-
 # Simple calculations (both return a RemoteRObject)
 x = R.eval("sin(100)")
-y = base_r.cos(100)
+y = R.env.cos(100)
 
 # Get results in python
 print(x.fetch(), y.fetch())
 
-# Bring a dataframe from R to Python (pd.DataFrame)
-iris_df = R.eval("iris").fetch('pandas')
+# Bring a dataframe from R to Python (different backends supported)
+iris_df = R.eval("iris").fetch('polars')
 print(iris_df.head())
 
 # Print head without first fetching to python
@@ -57,11 +54,12 @@ An interpreter supports the following operations:
 | `get`                                         | `x: Remote`                         | `simple/dataframe`  | Retrieve data from R                    |
 | `R.env.name` or `R.env[name]`                 | `name: str`                         | `RemoteName` (lazy) | Reference a remote symbol               |
 | `R.env.name = value` or `R.env[name] = value` | `name: str`, `value: simple/Remote` | –                   | Assign remotely                         |
-| `eval`                                        | `code: str | Template`                         | `RemoteObject`      | Evaluate R code                         |
-| `exec`                                        | `code: str | Template`                         | –                   | Execute R code (no return value)        |
+| `eval`                                        | `code: str/Template`                | `RemoteObject`      | Evaluate R code                         |
+| `exec`                                        | `code: str/Template`                | –                   | Execute R code (no return value)        |
 | `call`                                        | `f: Remote`, `*args`, `**kwargs`    | `RemoteObject`      | Call a remote function                  |
+| `print`                                       | `x: str`                            | –                   | Print a remote object                   |
 | `module`                                      | `x: str`                            | `RemoteModule`      | Reference a remote namespace or package |
-| `print`                                       | `x: str`                            | `RemoteModule`      | Prints a remote object                  |
+| `expression`                                  | `x: str`                            | `RemoteExpression`  | Create a remote expression              |
 
 
 ### Remote names and objects
@@ -84,43 +82,40 @@ result = R.get(R.env.x)   # 10
 result = R.env.x.fetch()   # 10
 ```
 
-The following methods can be used on both objects:
+The following methods can be used on both `RemoteName` and `RemoteObject`:
 
-| Method    | Parameters         | Returns                  | Description             |
-|-----------|--------------------|--------------------------|-------------------------|
-| obj.fetch | -                  | Value (as python object) | Same as R.get(self)     |
-| obj.call  | *args, **kwargs    | RemoteObject             | Calls a remote function |
-| obj.pipe  | f, *args, **kwargs | RemoteObject             | Pipes object through f  |
+| Method      | Parameters           | Returns            | Description            |
+|-------------|----------------------|--------------------|------------------------|
+| `obj.fetch` | –                    | `simple/dataframe` | Same as `R.get(self)`  |
+| `obj.call`  | `*args, **kwargs`    | `RemoteObject`     | Call a remote function |
+| `obj.pipe`  | `f, *args, **kwargs` | `RemoteObject`     | Pipe object through f  |
 
 * **RemoteModule** A remote namespace to help construct `RemoteName`s.
 
 Example:
 
 ```python
-base = R.module("math")
+base = R.module("base")
 
 # The __ is translated to a dot (calls base::data.frame)
-df = base.data__frame(year = [2010, 2020], population = [1_080_095, 1_120_015]) 
+df = base.data__frame(year = [2010, 2020],
+                      population = [1_080_095, 1_120_015],
+                      temperature = [20, 22]) 
 
 # Functions in base (and other built-ins) can also be accessed through R.env directly
 df = R.env.data__frame(...)
 ```
 
-* **RCode** Pass literal R-code as an argument.
+* **RemoteExpression** Pass a literal expression as an argument.
 Can be used to construct datatypes like formulae
 or function parameters that use Non Standard Evaluation.
-It can be called with a [t-string](https://docs.python.org/3/reference/lexical_analysis.html#t-strings) to interpolate python objects.
+Objects can be interpolated if given a [t-string](https://docs.python.org/3/reference/lexical_analysis.html#t-strings).
 
 Example:
 
 ```python
-from polyester import RCode
-
-model = R.env.lm(RCode("y ~ a + b + c"), data=df)
-
-# t-string
-nice_temperature = 25
-subset_df = R.env.subset(df, RCode(t"Temp >= {nice_temperature}"))
+nice_temperature = 21
+subset_df = base.subset(df, R.expression(t"temperature >= {nice_temperature}"))
 ```
 
 ---
